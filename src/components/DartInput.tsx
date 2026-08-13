@@ -1,13 +1,14 @@
-import { useState } from "react";
-import type { Dart, Multiplier } from "../game/types";
+import type { DartSlot, Multiplier } from "../game/types";
 
 interface DartInputProps {
-  dartsThisTurn: Dart[];
-  onAddDart: (dart: Dart) => void;
-  onRemoveLast: () => void;
+  slots: [DartSlot, DartSlot, DartSlot];
+  onSetSegment: (index: number, segment: number) => void;
+  onSetMultiplier: (index: number, multiplier: Multiplier) => void;
+  onClearSlot: (index: number) => void;
   onConfirmTurn: () => void;
   onBust: () => void;
-  disabled: boolean;
+  onUndo: () => void;
+  canUndo: boolean;
 }
 
 const NUMBERS = [
@@ -18,52 +19,45 @@ const NUMBERS = [
 ];
 
 export const DartInput = ({
-  dartsThisTurn,
-  onAddDart,
-  onRemoveLast,
+  slots,
+  onSetSegment,
+  onSetMultiplier,
+  onClearSlot,
   onConfirmTurn,
   onBust,
-  disabled,
+  onUndo,
+  canUndo,
 }: DartInputProps) => {
-  const [activeMultiplier, setActiveMultiplier] = useState<Multiplier>(1);
+  // Aktiver Slot: der erste, der noch keine Zahl hat. Zahlen-Taps landen
+  // dort. Multiplikator-Taps wirken ebenfalls auf den aktiven Slot -
+  // unabhängig davon, ob die Zahl schon gesetzt ist oder nicht.
+  const activeIndex = slots.findIndex((s) => s.segment === null);
+  const effectiveIndex = activeIndex === -1 ? null : activeIndex;
 
-  const canAddDart = dartsThisTurn.length < 3 && !disabled;
+  const hasAnyDart = slots.some((s) => s.segment !== null);
 
   const handleNumber = (segment: number) => {
-    if (!canAddDart) return;
-    onAddDart({ segment, multiplier: activeMultiplier });
-    setActiveMultiplier(1);
+    if (effectiveIndex === null) return;
+    onSetSegment(effectiveIndex, segment);
   };
 
-  const handleBull = () => {
-    if (!canAddDart) return;
-    // 25 direkt, x2 aktiv -> 50 (Bull-Extra). x3/x4 auf Bull nicht möglich.
-    const mult: Multiplier = activeMultiplier === 2 ? 2 : 1;
-    onAddDart({ segment: 25, multiplier: mult });
-    setActiveMultiplier(1);
-  };
-
-  const handleMiss = () => {
-    if (!canAddDart) return;
-    onAddDart({ segment: 0, multiplier: 1 });
-    setActiveMultiplier(1);
-  };
-
-  const toggleMultiplier = (m: Multiplier) => {
-    setActiveMultiplier((prev) => (prev === m ? 1 : m));
+  const handleMultiplierForActive = (m: Multiplier) => {
+    if (effectiveIndex === null) return;
+    onSetMultiplier(effectiveIndex, m);
   };
 
   return (
     <div className="dart-input">
-      <div className="dart-input__preview">
-        {[0, 1, 2].map((i) => {
-          const dart = dartsThisTurn[i];
-          return (
-            <div key={i} className={`dart-slot ${dart ? "filled" : ""}`}>
-              {dart ? formatDart(dart) : "-"}
-            </div>
-          );
-        })}
+      <div className="dart-columns">
+        {[0, 1, 2].map((i) => (
+          <DartColumn
+            key={i}
+            slot={slots[i]}
+            isActive={i === effectiveIndex}
+            onSetMultiplier={(m) => onSetMultiplier(i, m)}
+            onClear={() => onClearSlot(i)}
+          />
+        ))}
       </div>
 
       <div className="dart-input__grid">
@@ -71,62 +65,58 @@ export const DartInput = ({
           {NUMBERS.flat().map((n) => (
             <button
               key={n}
-              className={`num-btn ${activeMultiplier > 1 ? `mult-${activeMultiplier}` : ""}`}
+              className="num-btn"
               onClick={() => handleNumber(n)}
-              disabled={!canAddDart}
+              disabled={effectiveIndex === null}
             >
               {n}
             </button>
           ))}
           <button
-            className={`num-btn bull-btn ${activeMultiplier === 2 ? "mult-2" : ""}`}
-            onClick={handleBull}
-            disabled={!canAddDart}
+            className="num-btn bull-btn"
+            onClick={() => handleNumber(25)}
+            disabled={effectiveIndex === null}
           >
             25
           </button>
-          <button className="num-btn miss-btn" onClick={handleMiss} disabled={!canAddDart}>
+          <button
+            className="num-btn miss-btn"
+            onClick={() => handleNumber(0)}
+            disabled={effectiveIndex === null}
+          >
             0
           </button>
         </div>
 
         <div className="dart-input__modifiers">
           <button
-            className={`mod-btn ${activeMultiplier === 2 ? "active" : ""}`}
-            onClick={() => toggleMultiplier(2)}
-            disabled={!canAddDart}
+            className="mod-btn"
+            onClick={() => handleMultiplierForActive(2)}
+            disabled={effectiveIndex === null}
           >
             x2
           </button>
           <button
-            className={`mod-btn ${activeMultiplier === 3 ? "active" : ""}`}
-            onClick={() => toggleMultiplier(3)}
-            disabled={!canAddDart}
+            className="mod-btn"
+            onClick={() => handleMultiplierForActive(3)}
+            disabled={effectiveIndex === null}
           >
             x3
           </button>
           <button
-            className={`mod-btn ${activeMultiplier === 4 ? "active" : ""}`}
-            onClick={() => toggleMultiplier(4)}
-            disabled={!canAddDart}
+            className="mod-btn"
+            onClick={() => handleMultiplierForActive(4)}
+            disabled={effectiveIndex === null}
           >
             x4
           </button>
-          <button className="mod-btn bust-btn" onClick={onBust} disabled={disabled}>
+          <button className="mod-btn undo-btn" onClick={onUndo} disabled={!canUndo || hasAnyDart}>
+            Korrektur
+          </button>
+          <button className="mod-btn bust-btn" onClick={onBust} disabled={!hasAnyDart}>
             BUST
           </button>
-          <button
-            className="mod-btn remove-btn"
-            onClick={onRemoveLast}
-            disabled={dartsThisTurn.length === 0}
-          >
-            ⌫
-          </button>
-          <button
-            className="mod-btn confirm-btn"
-            onClick={onConfirmTurn}
-            disabled={dartsThisTurn.length === 0 || disabled}
-          >
+          <button className="mod-btn confirm-btn" onClick={onConfirmTurn} disabled={!hasAnyDart}>
             ✓
           </button>
         </div>
@@ -135,9 +125,43 @@ export const DartInput = ({
   );
 };
 
-const formatDart = (dart: Dart): string => {
-  if (dart.segment === 0) return "0";
-  if (dart.segment === 25) return dart.multiplier === 2 ? "B50" : "B25";
-  if (dart.multiplier === 1) return `${dart.segment}`;
-  return `${dart.multiplier}x${dart.segment}`;
+interface DartColumnProps {
+  slot: DartSlot;
+  isActive: boolean;
+  onSetMultiplier: (m: Multiplier) => void;
+  onClear: () => void;
+}
+
+const DartColumn = ({ slot, isActive, onSetMultiplier, onClear }: DartColumnProps) => {
+  const isBull = slot.segment === 25;
+  const isMiss = slot.segment === 0;
+  const canMultiply = slot.segment !== null && !isMiss;
+
+  return (
+    <div className={`dart-column ${isActive ? "active" : ""}`}>
+      <div className="dart-column__multipliers">
+        {[2, 3, 4].map((m) => (
+          <button
+            key={m}
+            className={`col-mult-btn ${slot.multiplier === m ? "selected" : ""}`}
+            onClick={() => onSetMultiplier(m as Multiplier)}
+            disabled={!canMultiply || (isBull && m > 2)}
+          >
+            x{m}
+          </button>
+        ))}
+      </div>
+      <button className="dart-column__value" onClick={onClear} disabled={slot.segment === null}>
+        {formatSlot(slot)}
+      </button>
+    </div>
+  );
+};
+
+const formatSlot = (slot: DartSlot): string => {
+  if (slot.segment === null) return "-";
+  if (slot.segment === 0) return "0";
+  if (slot.segment === 25) return slot.multiplier === 2 ? "B50" : "B25";
+  if (slot.multiplier === 1) return `${slot.segment}`;
+  return `${slot.multiplier}x${slot.segment}`;
 };

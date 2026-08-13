@@ -26,6 +26,28 @@ body {
   height: 100vh;
 }
 
+.app__topbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 6px 24px;
+  background: var(--bg-dark);
+}
+
+.abort-btn {
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.abort-btn:hover {
+  border-color: var(--red-bright);
+  color: var(--text);
+}
+
 /* ---------- Setup ---------- */
 .setup-screen {
   max-width: 480px;
@@ -159,6 +181,14 @@ body {
   border-color: var(--red-bright);
 }
 
+.score-box.checkout {
+  color: #3ecf6e;
+}
+
+.score-box.boogey {
+  color: #e0c020;
+}
+
 .scoreboard__lastturns {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -235,55 +265,113 @@ body {
 
 /* ---------- Dart Input ---------- */
 .dart-input {
-  margin-top: auto;
-  padding: 16px 24px 24px;
-  background: var(--bg-panel);
-}
-
-.dart-input__preview {
+  flex: 1;
   display: flex;
-  gap: 12px;
-  justify-content: center;
-  margin-bottom: 16px;
+  flex-direction: column;
+  padding: 12px 16px 16px;
+  background: var(--bg-panel);
+  gap: 10px;
 }
 
-.dart-slot {
-  width: 72px;
-  height: 56px;
+.dart-columns {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  width: 100%;
+}
+
+.dart-column {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.dart-column.active {
+  background: #2a1010;
+  outline: 2px solid var(--red-bright);
+}
+
+.dart-column__multipliers {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.col-mult-btn {
+  padding: 12px 0;
+  background: var(--bg-box);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.col-mult-btn.selected {
+  background: var(--red);
+  border-color: var(--red-bright);
+  color: var(--text);
+}
+
+.col-mult-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.dart-column__value {
+  height: 64px;
   background: var(--bg-box);
   border: 1px solid var(--border);
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.3rem;
+  font-size: 1.6rem;
+  font-weight: bold;
   color: var(--text-dim);
+  cursor: pointer;
 }
 
-.dart-slot.filled {
+.dart-column__value:not(:disabled) {
   color: var(--text);
   border-color: var(--red-bright);
 }
 
+.dart-column__value:disabled {
+  cursor: default;
+}
+
+.dart-input__hint {
+  text-align: center;
+  color: #e0a020;
+  font-size: 0.85rem;
+}
+
 .dart-input__grid {
+  flex: 1;
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 16px;
+  grid-template-columns: 5fr 2fr;
+  gap: 10px;
+  min-height: 0;
 }
 
 .dart-input__numbers {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(4, 1fr);
   gap: 8px;
 }
 
 .num-btn {
-  padding: 18px 0;
   background: var(--bg-box);
   border: 1px solid var(--border);
   border-radius: 8px;
   color: var(--text);
-  font-size: 1.3rem;
+  font-size: 1.8rem;
+  font-weight: bold;
   cursor: pointer;
 }
 
@@ -292,39 +380,23 @@ body {
   cursor: not-allowed;
 }
 
-.num-btn.mult-2 {
-  background: #1e3a5f;
-  border-color: #2e5a8f;
-}
-
-.num-btn.mult-3 {
-  background: #5f3a1e;
-  border-color: #8f5a2e;
-}
-
-.num-btn.mult-4 {
-  background: #3a1e5f;
-  border-color: #5a2e8f;
-}
-
 .miss-btn {
   color: var(--text-dim);
 }
 
 .dart-input__modifiers {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(6, 1fr);
   gap: 8px;
-  min-width: 160px;
 }
 
 .mod-btn {
-  padding: 18px 0;
   background: var(--bg-box);
   border: 1px solid var(--border);
   border-radius: 8px;
   color: var(--text);
-  font-size: 1.1rem;
+  font-size: 1.3rem;
+  font-weight: bold;
   cursor: pointer;
 }
 
@@ -336,13 +408,16 @@ body {
 .mod-btn.bust-btn {
   background: #4a1414;
   border-color: var(--red-bright);
-  grid-column: span 2;
 }
 
 .mod-btn.confirm-btn {
   background: #14602a;
   border-color: #1e8a3e;
-  grid-column: span 2;
+  font-size: 1.6rem;
+}
+
+.mod-btn.undo-btn {
+  font-size: 0.95rem;
 }
 
 .mod-btn:disabled {

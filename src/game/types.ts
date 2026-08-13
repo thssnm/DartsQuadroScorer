@@ -7,6 +7,22 @@ export interface Dart {
   multiplier: Multiplier;
 }
 
+// Ein Slot der aktuellen Aufnahme kann teilweise befüllt sein: nur die
+// Zahl gesetzt (Multiplikator noch offen, Default x1) oder nur der
+// Multiplikator vorgewählt (Zahl noch offen). null = komplett leer.
+export interface DartSlot {
+  segment: number | null;
+  multiplier: Multiplier;
+}
+
+export const emptySlot = (): DartSlot => ({ segment: null, multiplier: 1 });
+
+export const isSlotComplete = (slot: DartSlot): slot is DartSlot & { segment: number } =>
+  slot.segment !== null;
+
+export const slotToDart = (slot: DartSlot): Dart | null =>
+  isSlotComplete(slot) ? { segment: slot.segment, multiplier: slot.multiplier } : null;
+
 export interface Turn {
   darts: Dart[];
   scoreBefore: number;
@@ -14,11 +30,18 @@ export interface Turn {
   bust: boolean;
 }
 
+// Ein abgeschlossenes Leg: die Turns, die während des Legs geworfen wurden.
+export interface CompletedLeg {
+  turns: Turn[];
+  won: boolean;
+}
+
 export interface PlayerState {
   name: string;
   remaining: number;
-  turns: Turn[];
+  turns: Turn[]; // Turns des laufenden Legs
   legsWon: number;
+  legHistory: CompletedLeg[]; // abgeschlossene Legs (für Spiel-Ø, Best-Leg)
 }
 
 export type GamePhase = "setup" | "playing" | "leg-finished" | "match-finished";
@@ -29,7 +52,7 @@ export interface GameState {
   activePlayer: 0 | 1;
   startingPlayer: 0 | 1;
   legsToWin: number; // z.B. 2 bei "Best of 3"
-  currentLegDarts: Dart[]; // Darts des laufenden Aufnahme (max 3)
+  currentSlots: [DartSlot, DartSlot, DartSlot]; // die 3 Darts der laufenden Aufnahme
 }
 
 export const dartValue = (dart: Dart): number => {
