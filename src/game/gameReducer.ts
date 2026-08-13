@@ -1,5 +1,5 @@
-import type { Dart, GameState, PlayerState } from "./types";
-import { dartValue, isDoubleFinish, turnTotal } from "./types";
+import type { Dart, DartSlot, GameState, Multiplier, PlayerState, Turn } from "./types";
+import { dartValue, emptySlot, isDoubleFinish, isSlotComplete, slotToDart, turnTotal } from "./types";
 
 export const START_SCORE = 501;
 
@@ -8,7 +8,10 @@ export const createInitialPlayer = (name: string): PlayerState => ({
   remaining: START_SCORE,
   turns: [],
   legsWon: 0,
+  legHistory: [],
 });
+
+const emptySlots = (): [DartSlot, DartSlot, DartSlot] => [emptySlot(), emptySlot(), emptySlot()];
 
 export const createInitialState = (
   nameA: string,
@@ -20,17 +23,20 @@ export const createInitialState = (
   activePlayer: 0,
   startingPlayer: 0,
   legsToWin,
-  currentLegDarts: [],
+  currentSlots: emptySlots(),
 });
 
 export type GameAction =
   | { type: "START_MATCH" }
   | { type: "SWITCH_STARTING_PLAYER" }
-  | { type: "ADD_DART"; dart: Dart }
-  | { type: "REMOVE_LAST_DART" }
+  | { type: "SET_SLOT_SEGMENT"; index: number; segment: number }
+  | { type: "SET_SLOT_MULTIPLIER"; index: number; multiplier: Multiplier }
+  | { type: "CLEAR_SLOT"; index: number }
   | { type: "CONFIRM_TURN" }
   | { type: "FORCE_BUST" }
+  | { type: "UNDO_LAST_TURN" }
   | { type: "NEXT_LEG" }
+  | { type: "ABORT_MATCH" }
   | { type: "RESET_MATCH"; nameA: string; nameB: string; legsToWin: number };
 
 interface TurnOutcome {
@@ -58,10 +64,25 @@ export const evaluateTurn = (remaining: number, darts: Dart[]): TurnOutcome => {
   return { scoreAfter: newRemaining, bust: false, legWon: false };
 };
 
+// Begrenzt den Multiplikator eines Slots je nach Segment: Bull (25) nur
+// x1/x2, Miss (0) immer x1, normale Segmente x1-x4.
+const clampMultiplier = (segment: number | null, multiplier: Multiplier): Multiplier => {
+  if (segment === 0) return 1;
+  if (segment === 25 && multiplier > 2) return 2;
+  return multiplier;
+};
+
+const confirmedDarts = (slots: [DartSlot, DartSlot, DartSlot]): Dart[] =>
+  slots.filter(isSlotComplete).map((s) => slotToDart(s) as Dart);
+
 export const gameReducer = (state: GameState, action: GameAction): GameState => {
   switch (action.type) {
     case "RESET_MATCH": {
       return createInitialState(action.nameA, action.nameB, action.legsToWin);
+    }
+
+    case "ABORT_MATCH": {
+      return createInitialState(state.players[0].name, state.players[1].name, state.legsToWin);
     }
 
     case "SWITCH_STARTING_PLAYER": {
@@ -74,53 +95,95 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
       return { ...state, phase: "playing" };
     }
 
-    case "ADD_DART": {
+    // Zahl für einen Slot setzen. Reihenfolge egal — kann vor oder nach dem
+    // Multiplikator kommen. Der Slot muss noch keine Zahl haben, sonst wird
+    // sie ersetzt (Korrektur).
+    case "SET_SLOT_SEGMENT": {
       if (state.phase !== "playing") return state;
-      if (state.currentLegDarts.length >= 3) return state;
-      return { ...state, currentLegDarts: [...state.currentLegDarts, action.dart] };
+      const slot = state.currentSlots[action.index];
+      if (!slot) return state;
+      const newSlot: DartSlot = {
+        segment: action.segment,
+        multiplier: clampMultiplier(action.segment, slot.multiplier),
+      };
+      const currentSlots = state.currentSlots.map((s, i) =>
+        i === action.index ? newSlot : s
+      ) as [DartSlot, DartSlot, DartSlot];
+      return { ...state, currentSlots };
     }
 
-    case "REMOVE_LAST_DART": {
-      if (state.currentLegDarts.length === 0) return state;
-      return { ...state, currentLegDarts: state.currentLegDarts.slice(0, -1) };
+    // Multiplikator für einen Slot setzen/togglen. Kann auch gesetzt werden
+    // bevor die Zahl feststeht (Multiplikator wird vorgemerkt).
+    case "SET_SLOT_MULTIPLIER": {
+      if (state.phase !== "playing") return state;
+      const slot = state.currentSlots[action.index];
+      if (!slot) return state;
+      const nextMultiplier: Multiplier = slot.multiplier === action.multiplier ? 1 : action.multiplier;
+      const newSlot: DartSlot = {
+        segment: slot.segment,
+        multiplier: clampMultiplier(slot.segment, nextMultiplier),
+      };
+      const currentSlots = state.currentSlots.map((s, i) =>
+        i === action.index ? newSlot : s
+      ) as [DartSlot, DartSlot, DartSlot];
+      return { ...state, currentSlots };
+    }
+
+    case "CLEAR_SLOT": {
+      if (state.phase !== "playing") return state;
+      const currentSlots = state.currentSlots.map((s, i) =>
+        i === action.index ? emptySlot() : s
+      ) as [DartSlot, DartSlot, DartSlot];
+      return { ...state, currentSlots };
     }
 
     case "CONFIRM_TURN": {
       if (state.phase !== "playing") return state;
-      if (state.currentLegDarts.length === 0) return state;
+      const darts = confirmedDarts(state.currentSlots);
+      if (darts.length === 0) return state;
 
       const activeIdx = state.activePlayer;
       const player = state.players[activeIdx];
-      const outcome = evaluateTurn(player.remaining, state.currentLegDarts);
+      const outcome = evaluateTurn(player.remaining, darts);
+      const turn: Turn = {
+        darts,
+        scoreBefore: player.remaining,
+        scoreAfter: outcome.scoreAfter,
+        bust: outcome.bust,
+      };
 
       const updatedPlayer: PlayerState = {
         ...player,
         remaining: outcome.scoreAfter,
-        turns: [
-          ...player.turns,
-          {
-            darts: state.currentLegDarts,
-            scoreBefore: player.remaining,
-            scoreAfter: outcome.scoreAfter,
-            bust: outcome.bust,
-          },
-        ],
+        turns: [...player.turns, turn],
       };
 
       const players: [PlayerState, PlayerState] =
         activeIdx === 0 ? [updatedPlayer, state.players[1]] : [state.players[0], updatedPlayer];
 
       if (outcome.legWon) {
-        const finishedPlayer: PlayerState = { ...updatedPlayer, legsWon: updatedPlayer.legsWon + 1 };
+        const finishedPlayer: PlayerState = {
+          ...updatedPlayer,
+          legsWon: updatedPlayer.legsWon + 1,
+          legHistory: [...updatedPlayer.legHistory, { turns: updatedPlayer.turns, won: true }],
+          turns: [],
+        };
+        const otherIdx: 0 | 1 = activeIdx === 0 ? 1 : 0;
+        const otherPlayer = state.players[otherIdx];
+        const finishedOther: PlayerState = {
+          ...otherPlayer,
+          legHistory: [...otherPlayer.legHistory, { turns: otherPlayer.turns, won: false }],
+          turns: [],
+        };
         const finalPlayers: [PlayerState, PlayerState] =
-          activeIdx === 0 ? [finishedPlayer, state.players[1]] : [state.players[0], finishedPlayer];
+          activeIdx === 0 ? [finishedPlayer, finishedOther] : [finishedOther, finishedPlayer];
 
         const matchWon = finishedPlayer.legsWon >= state.legsToWin;
 
         return {
           ...state,
           players: finalPlayers,
-          currentLegDarts: [],
+          currentSlots: emptySlots(),
           phase: matchWon ? "match-finished" : "leg-finished",
         };
       }
@@ -128,7 +191,7 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
       return {
         ...state,
         players,
-        currentLegDarts: [],
+        currentSlots: emptySlots(),
         activePlayer: activeIdx === 0 ? 1 : 0,
       };
     }
@@ -137,22 +200,22 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
     // geworfen (für die Statistik), der Punktestand bleibt aber unverändert.
     case "FORCE_BUST": {
       if (state.phase !== "playing") return state;
-      if (state.currentLegDarts.length === 0) return state;
+      const darts = confirmedDarts(state.currentSlots);
+      if (darts.length === 0) return state;
 
       const activeIdx = state.activePlayer;
       const player = state.players[activeIdx];
 
+      const turn: Turn = {
+        darts,
+        scoreBefore: player.remaining,
+        scoreAfter: player.remaining,
+        bust: true,
+      };
+
       const updatedPlayer: PlayerState = {
         ...player,
-        turns: [
-          ...player.turns,
-          {
-            darts: state.currentLegDarts,
-            scoreBefore: player.remaining,
-            scoreAfter: player.remaining,
-            bust: true,
-          },
-        ],
+        turns: [...player.turns, turn],
       };
 
       const players: [PlayerState, PlayerState] =
@@ -161,8 +224,42 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
       return {
         ...state,
         players,
-        currentLegDarts: [],
+        currentSlots: emptySlots(),
         activePlayer: activeIdx === 0 ? 1 : 0,
+      };
+    }
+
+    // Korrigiert die zuletzt bestätigte Aufnahme (egal ob normal oder Bust):
+    // die Aufnahme wird aus der Historie entfernt, der Punktestand des
+    // betroffenen Spielers zurückgesetzt, die Darts wandern zurück in die
+    // aktuelle Eingabe, damit sie neu eingegeben werden können.
+    case "UNDO_LAST_TURN": {
+      if (state.phase !== "playing") return state;
+      const lastPlayerIdx: 0 | 1 = state.activePlayer === 0 ? 1 : 0;
+      const player = state.players[lastPlayerIdx];
+      if (player.turns.length === 0) return state;
+      if (confirmedDarts(state.currentSlots).length > 0) return state; // erst laufende Eingabe klären
+
+      const lastTurn = player.turns[player.turns.length - 1];
+      const updatedPlayer: PlayerState = {
+        ...player,
+        remaining: lastTurn.scoreBefore,
+        turns: player.turns.slice(0, -1),
+      };
+
+      const players: [PlayerState, PlayerState] =
+        lastPlayerIdx === 0 ? [updatedPlayer, state.players[1]] : [state.players[0], updatedPlayer];
+
+      const restoredSlots = emptySlots();
+      lastTurn.darts.forEach((d, i) => {
+        if (i < 3) restoredSlots[i] = { segment: d.segment, multiplier: d.multiplier };
+      });
+
+      return {
+        ...state,
+        players,
+        activePlayer: lastPlayerIdx,
+        currentSlots: restoredSlots,
       };
     }
 
@@ -178,7 +275,7 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
         players: resetPlayers,
         startingPlayer: nextStarting,
         activePlayer: nextStarting,
-        currentLegDarts: [],
+        currentSlots: emptySlots(),
         phase: "playing",
       };
     }

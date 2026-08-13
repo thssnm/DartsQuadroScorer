@@ -60,16 +60,37 @@ function App() {
     );
   }
 
+  // Der Spieler, der zuletzt geworfen hat, ist NICHT state.activePlayer
+  // (activePlayer wurde nach CONFIRM_TURN/FORCE_BUST bereits gewechselt).
+  const lastThrowerIdx: 0 | 1 = state.activePlayer === 0 ? 1 : 0;
+  const canUndo = state.players[lastThrowerIdx].turns.length > 0;
+
   return (
     <div className="app">
+      <div className="app__topbar">
+        <button
+          className="abort-btn"
+          onClick={() => {
+            if (window.confirm("Spiel wirklich abbrechen und neu starten?")) {
+              dispatch({ type: "ABORT_MATCH" });
+            }
+          }}
+        >
+          Spiel abbrechen
+        </button>
+      </div>
       <Scoreboard state={state} />
       <DartInput
-        dartsThisTurn={state.currentLegDarts}
-        onAddDart={(dart) => dispatch({ type: "ADD_DART", dart })}
-        onRemoveLast={() => dispatch({ type: "REMOVE_LAST_DART" })}
+        slots={state.currentSlots}
+        onSetSegment={(index, segment) => dispatch({ type: "SET_SLOT_SEGMENT", index, segment })}
+        onSetMultiplier={(index, multiplier) =>
+          dispatch({ type: "SET_SLOT_MULTIPLIER", index, multiplier })
+        }
+        onClearSlot={(index) => dispatch({ type: "CLEAR_SLOT", index })}
         onConfirmTurn={() => dispatch({ type: "CONFIRM_TURN" })}
         onBust={() => dispatch({ type: "FORCE_BUST" })}
-        disabled={false}
+        onUndo={() => dispatch({ type: "UNDO_LAST_TURN" })}
+        canUndo={canUndo}
       />
     </div>
   );
