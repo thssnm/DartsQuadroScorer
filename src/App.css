@@ -269,16 +269,23 @@ body {
   font-size: 1.3rem;
 }
 
-.score-panel__row.near-checkout::after {
-  content: "";
+.score-panel__row.near-checkout {
+  position: relative;
+}
+
+.checkout-line {
   position: absolute;
-  left: -2px;
-  right: -2px;
-  top: 50%;
-  height: 2px;
-  background: var(--text-dim);
-  transform: rotate(-4deg);
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
+}
+
+.checkout-line line {
+  stroke: var(--text-dim);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
 }
 
 /* ---------- Dart Input ---------- */
