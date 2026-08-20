@@ -108,26 +108,24 @@ const ScorePanel = ({ player }: { player: GameState["players"][number] }) => {
   return (
     <div className="score-panel">
       <div className="score-panel__header">
-        <span>Score</span>
         <span>Punkte</span>
+        <span>Score</span>
       </div>
       <div className="score-panel__list">
-        {rows.length === 0 && (
-          <div className="score-panel__row">
-            <strong>501</strong>
-            <strong>0</strong>
-          </div>
-        )}
+        <div className="score-panel__row">
+          <strong></strong>
+          <strong>501</strong>
+        </div>
         {rows.map((row, i) => (
           <div
             key={i}
             className={`score-panel__row ${isWithinCheckoutThreshold(row.remainingAfter) ? "near-checkout" : ""}`}
           >
-            <strong>{row.remainingAfter}</strong>
             <strong>{row.bust ? "BUST" : row.points}</strong>
+            <strong>{row.remainingAfter}</strong>
             {isWithinCheckoutThreshold(row.remainingAfter) && (
-              <svg className="checkout-line" viewBox="0 0 100 20" preserveAspectRatio="none">
-                <line x1="8" y1="16" x2="92" y2="4" />
+              <svg className="checkout-line" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <line x1="6" y1="65" x2="94" y2="35" />
               </svg>
             )}
           </div>

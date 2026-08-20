@@ -284,8 +284,7 @@ body {
 
 .checkout-line line {
   stroke: var(--text-dim);
-  stroke-width: 1.5;
-  vector-effect: non-scaling-stroke;
+  stroke-width: 4;
 }
 
 /* ---------- Dart Input ---------- */
