@@ -12,3 +12,8 @@ export const isCheckoutRange = (remaining: number): boolean =>
   remaining >= 2 && remaining <= MAX_CHECKOUT && !BOOGEY_NUMBERS.has(remaining);
 
 export const isBoogeyNumber = (remaining: number): boolean => BOOGEY_NUMBERS.has(remaining);
+
+// Für die Trennlinie in der Aufnahmen-Liste: unabhängig von Boogey einfach
+// "Rest liegt im theoretischen Checkout-Bereich" (<= 210, Quadro-Finish).
+export const isWithinCheckoutThreshold = (remaining: number): boolean =>
+  remaining > 0 && remaining <= MAX_CHECKOUT;

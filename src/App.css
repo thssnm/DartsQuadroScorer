@@ -256,11 +256,29 @@ body {
   font-size: 0.9rem;
 }
 
+.score-panel__list {
+  max-height: 220px;
+  overflow-y: auto;
+}
+
 .score-panel__row {
+  position: relative;
   display: flex;
   justify-content: space-between;
-  padding: 8px 4px;
-  font-size: 1.4rem;
+  padding: 6px 4px;
+  font-size: 1.3rem;
+}
+
+.score-panel__row.near-checkout::after {
+  content: "";
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  top: 50%;
+  height: 2px;
+  background: var(--text-dim);
+  transform: rotate(-4deg);
+  pointer-events: none;
 }
 
 /* ---------- Dart Input ---------- */
@@ -344,24 +362,47 @@ body {
   cursor: default;
 }
 
-.dart-input__hint {
-  text-align: center;
-  color: #e0a020;
-  font-size: 0.85rem;
+.dart-input__summary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 6px 4px;
 }
 
-.dart-input__grid {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 5fr 2fr;
-  gap: 10px;
-  min-height: 0;
+.summary-value {
+  font-size: 1.4rem;
+  color: var(--text-dim);
+  min-width: 32px;
+}
+
+.summary-total {
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: var(--text);
+}
+
+.undo-inline-btn {
+  margin-left: auto;
+  padding: 8px 14px;
+  background: var(--bg-box);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.undo-inline-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .dart-input__numbers {
+  flex: 1;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  grid-template-rows: repeat(4, 1fr);
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(3, 1fr);
   gap: 8px;
 }
 
@@ -370,7 +411,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 8px;
   color: var(--text);
-  font-size: 1.8rem;
+  font-size: 1.7rem;
   font-weight: bold;
   cursor: pointer;
 }
@@ -380,47 +421,39 @@ body {
   cursor: not-allowed;
 }
 
-.miss-btn {
-  color: var(--text-dim);
-}
-
-.dart-input__modifiers {
+.dart-input__actionrow {
   display: grid;
-  grid-template-rows: repeat(6, 1fr);
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 8px;
 }
 
-.mod-btn {
+.action-btn {
+  padding: 16px 0;
   background: var(--bg-box);
   border: 1px solid var(--border);
   border-radius: 8px;
   color: var(--text);
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   font-weight: bold;
   cursor: pointer;
 }
 
-.mod-btn.active {
-  background: var(--red);
-  border-color: var(--red-bright);
+.action-btn.noscore-btn {
+  color: var(--text-dim);
 }
 
-.mod-btn.bust-btn {
+.action-btn.bust-btn {
   background: #4a1414;
   border-color: var(--red-bright);
 }
 
-.mod-btn.confirm-btn {
+.action-btn.confirm-btn {
   background: #14602a;
   border-color: #1e8a3e;
   font-size: 1.6rem;
 }
 
-.mod-btn.undo-btn {
-  font-size: 0.95rem;
-}
-
-.mod-btn:disabled {
+.action-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }

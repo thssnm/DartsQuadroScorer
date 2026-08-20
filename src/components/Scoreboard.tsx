@@ -1,7 +1,7 @@
 import type { GameState } from "../game/types";
 import { turnTotal } from "../game/types";
 import { computePlayerStats } from "../game/stats";
-import { isBoogeyNumber, isCheckoutRange } from "../game/checkout";
+import { isBoogeyNumber, isCheckoutRange, isWithinCheckoutThreshold } from "../game/checkout";
 
 interface ScoreboardProps {
   state: GameState;
@@ -56,8 +56,8 @@ export const Scoreboard = ({ state }: ScoreboardProps) => {
 
       <div className="scoreboard__stats">
         <StatsPanel stats={stats0} />
-        <ScorePanel score={501} totalScored={501 - p0.remaining} />
-        <ScorePanel score={501} totalScored={501 - p1.remaining} />
+        <ScorePanel player={p0} />
+        <ScorePanel player={p1} />
         <StatsPanel stats={stats1} />
       </div>
     </div>
@@ -96,15 +96,38 @@ const StatsPanel = ({ stats }: { stats: ReturnType<typeof computePlayerStats> })
   </div>
 );
 
-const ScorePanel = ({ score, totalScored }: { score: number; totalScored: number }) => (
-  <div className="score-panel">
-    <div className="score-panel__header">
-      <span>Score</span>
-      <span>Punkte</span>
+const ScorePanel = ({ player }: { player: GameState["players"][number] }) => {
+  // Rest-Score nach jeder Aufnahme berechnen, um die Zeilen aufzubauen.
+  // Bei Bust bleibt der Rest unverändert (turn.scoreAfter trägt das bereits korrekt).
+  const rows = player.turns.map((t) => ({
+    points: t.bust ? 0 : turnTotal(t.darts),
+    remainingAfter: t.scoreAfter,
+    bust: t.bust,
+  }));
+
+  return (
+    <div className="score-panel">
+      <div className="score-panel__header">
+        <span>Score</span>
+        <span>Punkte</span>
+      </div>
+      <div className="score-panel__list">
+        {rows.length === 0 && (
+          <div className="score-panel__row">
+            <strong>501</strong>
+            <strong>0</strong>
+          </div>
+        )}
+        {rows.map((row, i) => (
+          <div
+            key={i}
+            className={`score-panel__row ${isWithinCheckoutThreshold(row.remainingAfter) ? "near-checkout" : ""}`}
+          >
+            <strong>{row.remainingAfter}</strong>
+            <strong>{row.bust ? "BUST" : row.points}</strong>
+          </div>
+        ))}
+      </div>
     </div>
-    <div className="score-panel__row">
-      <strong>{score}</strong>
-      <strong>{totalScored}</strong>
-    </div>
-  </div>
-);
+  );
+};
