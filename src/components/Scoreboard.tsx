@@ -125,6 +125,11 @@ const ScorePanel = ({ player }: { player: GameState["players"][number] }) => {
           >
             <strong>{row.remainingAfter}</strong>
             <strong>{row.bust ? "BUST" : row.points}</strong>
+            {isWithinCheckoutThreshold(row.remainingAfter) && (
+              <svg className="checkout-line" viewBox="0 0 100 20" preserveAspectRatio="none">
+                <line x1="8" y1="16" x2="92" y2="4" />
+              </svg>
+            )}
           </div>
         ))}
       </div>
