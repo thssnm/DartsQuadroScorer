@@ -18,9 +18,13 @@ const dartsInTurns = (turns: Turn[]) => turns.reduce((sum, t) => sum + t.darts.l
 const scoreInTurns = (turns: Turn[]) =>
   turns.reduce((sum, t) => sum + (t.bust ? 0 : turnTotal(t.darts)), 0);
 
+// Average wird nach Darts-Konvention pro AUFNAHME berechnet (nicht pro
+// einzelnem Dart): Gesamtpunkte / Anzahl Aufnahmen * 3. Eine Aufnahme mit
+// weniger als 3 Darts (z.B. Finish nach 1-2 Darts) zählt trotzdem als eine
+// volle Aufnahme - alles andere würde den Schnitt künstlich verzerren.
 const average = (turns: Turn[]): number => {
-  const darts = dartsInTurns(turns);
-  return darts > 0 ? (scoreInTurns(turns) / darts) * 3 : 0;
+  if (turns.length === 0) return 0;
+  return (scoreInTurns(turns) / turns.length) * 3;
 };
 
 const bestLegFromHistory = (legHistory: CompletedLeg[]): BestLeg | null => {

@@ -1,4 +1,5 @@
 import type { DartSlot, Multiplier } from "../game/types";
+import { dartValue, isSlotComplete, turnTotal } from "../game/types";
 
 interface DartInputProps {
   slots: [DartSlot, DartSlot, DartSlot];
@@ -12,10 +13,9 @@ interface DartInputProps {
 }
 
 const NUMBERS = [
-  [1, 2, 3, 4, 5],
-  [6, 7, 8, 9, 10],
-  [11, 12, 13, 14, 15],
-  [16, 17, 18, 19, 20],
+  [1, 2, 3, 4, 5, 6, 7],
+  [8, 9, 10, 11, 12, 13, 14],
+  [15, 16, 17, 18, 19, 20, 25],
 ];
 
 export const DartInput = ({
@@ -35,19 +35,40 @@ export const DartInput = ({
   const effectiveIndex = activeIndex === -1 ? null : activeIndex;
 
   const hasAnyDart = slots.some((s) => s.segment !== null);
+  const completedDarts = slots.filter(isSlotComplete).map((s) => ({
+    segment: s.segment,
+    multiplier: s.multiplier,
+  }));
+  const runningTotal = turnTotal(completedDarts);
 
   const handleNumber = (segment: number) => {
     if (effectiveIndex === null) return;
     onSetSegment(effectiveIndex, segment);
   };
 
-  const handleMultiplierForActive = (m: Multiplier) => {
+  const handleNoScore = () => {
     if (effectiveIndex === null) return;
-    onSetMultiplier(effectiveIndex, m);
+    onSetSegment(effectiveIndex, 0);
   };
 
   return (
     <div className="dart-input">
+      <div className="dart-input__summary">
+        {[0, 1, 2].map((i) => {
+          const slot = slots[i];
+          const value = isSlotComplete(slot) ? dartValue({ segment: slot.segment, multiplier: slot.multiplier }) : null;
+          return (
+            <span key={i} className="summary-value">
+              {value === null ? "-" : value}
+            </span>
+          );
+        })}
+        <span className="summary-total">{runningTotal}</span>
+        <button className="undo-inline-btn" onClick={onUndo} disabled={!canUndo || hasAnyDart}>
+          RÜCKGÄNGIG
+        </button>
+      </div>
+
       <div className="dart-columns">
         {[0, 1, 2].map((i) => (
           <DartColumn
@@ -60,66 +81,29 @@ export const DartInput = ({
         ))}
       </div>
 
-      <div className="dart-input__grid">
-        <div className="dart-input__numbers">
-          {NUMBERS.flat().map((n) => (
-            <button
-              key={n}
-              className="num-btn"
-              onClick={() => handleNumber(n)}
-              disabled={effectiveIndex === null}
-            >
-              {n}
-            </button>
-          ))}
+      <div className="dart-input__numbers">
+        {NUMBERS.flat().map((n) => (
           <button
-            className="num-btn bull-btn"
-            onClick={() => handleNumber(25)}
+            key={n}
+            className="num-btn"
+            onClick={() => handleNumber(n)}
             disabled={effectiveIndex === null}
           >
-            25
+            {n}
           </button>
-          <button
-            className="num-btn miss-btn"
-            onClick={() => handleNumber(0)}
-            disabled={effectiveIndex === null}
-          >
-            0
-          </button>
-        </div>
+        ))}
+      </div>
 
-        <div className="dart-input__modifiers">
-          <button
-            className="mod-btn"
-            onClick={() => handleMultiplierForActive(2)}
-            disabled={effectiveIndex === null}
-          >
-            x2
-          </button>
-          <button
-            className="mod-btn"
-            onClick={() => handleMultiplierForActive(3)}
-            disabled={effectiveIndex === null}
-          >
-            x3
-          </button>
-          <button
-            className="mod-btn"
-            onClick={() => handleMultiplierForActive(4)}
-            disabled={effectiveIndex === null}
-          >
-            x4
-          </button>
-          <button className="mod-btn undo-btn" onClick={onUndo} disabled={!canUndo || hasAnyDart}>
-            Korrektur
-          </button>
-          <button className="mod-btn bust-btn" onClick={onBust} disabled={!hasAnyDart}>
-            BUST
-          </button>
-          <button className="mod-btn confirm-btn" onClick={onConfirmTurn} disabled={!hasAnyDart}>
-            ✓
-          </button>
-        </div>
+      <div className="dart-input__actionrow">
+        <button className="action-btn noscore-btn" onClick={handleNoScore} disabled={effectiveIndex === null}>
+          NO SCORE
+        </button>
+        <button className="action-btn bust-btn" onClick={onBust} disabled={!hasAnyDart}>
+          BUST
+        </button>
+        <button className="action-btn confirm-btn" onClick={onConfirmTurn} disabled={!hasAnyDart}>
+          ✓
+        </button>
       </div>
     </div>
   );
