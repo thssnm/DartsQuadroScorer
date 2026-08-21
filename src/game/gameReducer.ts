@@ -34,6 +34,7 @@ export type GameAction =
   | { type: "CLEAR_SLOT"; index: number }
   | { type: "CONFIRM_TURN" }
   | { type: "UNDO_LAST_TURN" }
+  | { type: "EDIT_TURN"; playerIndex: 0 | 1; turnIndex: number }
   | { type: "NEXT_LEG" }
   | { type: "ABORT_MATCH" }
   | { type: "RESET_MATCH"; nameA: string; nameB: string; legsToWin: number };
@@ -211,16 +212,16 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
       };
     }
 
-    // Korrigiert die zuletzt bestätigte Aufnahme: die Aufnahme wird aus der Historie entfernt, der Punktestand des
-    // betroffenen Spielers zurückgesetzt, die Darts wandern zurück in die
-    // aktuelle Eingabe, damit sie neu eingegeben werden können.
+    // Korrigiert die zuletzt bestätigte Aufnahme: die Aufnahme wird aus der
+    // Historie entfernt, der Punktestand des betroffenen Spielers
+    // zurückgesetzt, die Darts wandern zurück in die aktuelle Eingabe.
+    // Mehrfach hintereinander drückbar - eine eventuell laufende Eingabe
+    // wird dabei verworfen zugunsten der letzten bestätigten Aufnahme.
     case "UNDO_LAST_TURN": {
       if (state.phase !== "playing") return state;
       const lastPlayerIdx: 0 | 1 = state.activePlayer === 0 ? 1 : 0;
       const player = state.players[lastPlayerIdx];
       if (player.turns.length === 0) return state;
-      const hasPendingInput = state.currentSlots.some((s) => s.segment !== null);
-      if (hasPendingInput) return state; // erst laufende Eingabe klären
 
       const lastTurn = player.turns[player.turns.length - 1];
       const updatedPlayer: PlayerState = {
@@ -241,6 +242,43 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
         ...state,
         players,
         activePlayer: lastPlayerIdx,
+        currentSlots: restoredSlots,
+      };
+    }
+
+    // Öffnet eine beliebige Aufnahme des AKTUELL LAUFENDEN Legs erneut zur
+    // Bearbeitung (Klick in der Score-Liste). Diese Aufnahme und alle danach
+    // folgenden werden aus der Historie entfernt (müssen neu geworfen
+    // werden), der Punktestand wird auf den Stand vor der bearbeiteten
+    // Aufnahme zurückgesetzt, deren Darts wandern in die aktuelle Eingabe.
+    // Bereits abgeschlossene Legs (legHistory) sind davon nicht betroffen.
+    case "EDIT_TURN": {
+      if (state.phase !== "playing") return state;
+      const player = state.players[action.playerIndex];
+      const targetTurn = player.turns[action.turnIndex];
+      if (!targetTurn) return state;
+
+      const updatedPlayer: PlayerState = {
+        ...player,
+        remaining: targetTurn.scoreBefore,
+        turns: player.turns.slice(0, action.turnIndex),
+      };
+
+      // Der jeweils andere Spieler wird nicht verändert - seine bereits
+      // geworfenen Aufnahmen in diesem Leg bleiben unangetastet, auch wenn
+      // sie zeitlich nach der bearbeiteten Aufnahme kamen.
+      const players: [PlayerState, PlayerState] =
+        action.playerIndex === 0 ? [updatedPlayer, state.players[1]] : [state.players[0], updatedPlayer];
+
+      const restoredSlots = emptySlots();
+      targetTurn.darts.forEach((d, i) => {
+        if (i < 3) restoredSlots[i] = { segment: d.segment, multiplier: d.multiplier };
+      });
+
+      return {
+        ...state,
+        players,
+        activePlayer: action.playerIndex,
         currentSlots: restoredSlots,
       };
     }

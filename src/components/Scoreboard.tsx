@@ -5,6 +5,7 @@ import { isBoogeyNumber, isCheckoutRange, isWithinCheckoutThreshold } from "../g
 
 interface ScoreboardProps {
   state: GameState;
+  onEditTurn: (playerIndex: 0 | 1, turnIndex: number) => void;
 }
 
 const scoreClass = (remaining: number): string => {
@@ -13,7 +14,7 @@ const scoreClass = (remaining: number): string => {
   return "";
 };
 
-export const Scoreboard = ({ state }: ScoreboardProps) => {
+export const Scoreboard = ({ state, onEditTurn }: ScoreboardProps) => {
   const [p0, p1] = state.players;
   const stats0 = computePlayerStats(p0);
   const stats1 = computePlayerStats(p1);
@@ -56,8 +57,8 @@ export const Scoreboard = ({ state }: ScoreboardProps) => {
 
       <div className="scoreboard__stats">
         <StatsPanel stats={stats0} />
-        <ScorePanel player={p0} />
-        <ScorePanel player={p1} />
+        <ScorePanel player={p0} playerIndex={0} onEditTurn={onEditTurn} />
+        <ScorePanel player={p1} playerIndex={1} onEditTurn={onEditTurn} />
         <StatsPanel stats={stats1} />
       </div>
     </div>
@@ -90,13 +91,21 @@ const StatsPanel = ({ stats }: { stats: ReturnType<typeof computePlayerStats> })
       </div>
       <div className="stat-box">
         <span>Best</span>
-        <strong>{stats.bestLeg ? `${stats.bestLeg.darts}D` : "-"}</strong>
+        <strong>{stats.bestLeg ? stats.bestLeg.darts : "-"}</strong>
       </div>
     </div>
   </div>
 );
 
-const ScorePanel = ({ player }: { player: GameState["players"][number] }) => {
+const ScorePanel = ({
+  player,
+  playerIndex,
+  onEditTurn,
+}: {
+  player: GameState["players"][number];
+  playerIndex: 0 | 1;
+  onEditTurn: (playerIndex: 0 | 1, turnIndex: number) => void;
+}) => {
   // Rest-Score nach jeder Aufnahme berechnen, um die Zeilen aufzubauen.
   // Bei Bust bleibt der Rest unverändert (turn.scoreAfter trägt das bereits korrekt).
   const rows = player.turns.map((t) => ({
@@ -117,9 +126,10 @@ const ScorePanel = ({ player }: { player: GameState["players"][number] }) => {
           <strong>501</strong>
         </div>
         {rows.map((row, i) => (
-          <div
+          <button
             key={i}
-            className={`score-panel__row ${isWithinCheckoutThreshold(row.remainingAfter) ? "near-checkout" : ""}`}
+            className={`score-panel__row score-panel__row--editable ${isWithinCheckoutThreshold(row.remainingAfter) ? "near-checkout" : ""}`}
+            onClick={() => onEditTurn(playerIndex, i)}
           >
             <strong>{row.bust ? "BUST" : row.points}</strong>
             <strong>{row.remainingAfter}</strong>
@@ -128,7 +138,7 @@ const ScorePanel = ({ player }: { player: GameState["players"][number] }) => {
                 <line x1="6" y1="65" x2="94" y2="35" />
               </svg>
             )}
-          </div>
+          </button>
         ))}
       </div>
     </div>
