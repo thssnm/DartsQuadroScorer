@@ -33,7 +33,6 @@ export type GameAction =
   | { type: "SET_SLOT_MULTIPLIER"; index: number; multiplier: Multiplier }
   | { type: "CLEAR_SLOT"; index: number }
   | { type: "CONFIRM_TURN" }
-  | { type: "FORCE_BUST" }
   | { type: "UNDO_LAST_TURN" }
   | { type: "NEXT_LEG" }
   | { type: "ABORT_MATCH" }
@@ -72,8 +71,25 @@ const clampMultiplier = (segment: number | null, multiplier: Multiplier): Multip
   return multiplier;
 };
 
-const confirmedDarts = (slots: [DartSlot, DartSlot, DartSlot]): Dart[] =>
-  slots.filter(isSlotComplete).map((s) => slotToDart(s) as Dart);
+// Wandelt die aktuellen Slots in Darts um.
+// - Sind ALLE 3 Slots leer, gilt das als sofortiges Bestätigen ohne Eingabe
+//   und wird als 0/0/0 gewertet (3 geworfene Fehlwürfe).
+// - Sind 1-2 Slots befüllt und der Rest leer (z.B. Leg-Ende nach 2 Darts),
+//   zählen NUR die tatsächlich eingegebenen Darts - kein Auffüllen mit 0.
+//   Das ist wichtig für die Double-Out-Prüfung: der letzte eingegebene Dart
+//   muss der letzte in der Liste bleiben, sonst würde ein automatisch
+//   angehängter Fehlwurf ein gültiges Finish verdecken.
+const confirmedDarts = (slots: [DartSlot, DartSlot, DartSlot]): Dart[] => {
+  const filled = slots.filter(isSlotComplete).map((s) => slotToDart(s) as Dart);
+  if (filled.length === 0) {
+    return [
+      { segment: 0, multiplier: 1 },
+      { segment: 0, multiplier: 1 },
+      { segment: 0, multiplier: 1 },
+    ];
+  }
+  return filled;
+};
 
 export const gameReducer = (state: GameState, action: GameAction): GameState => {
   switch (action.type) {
@@ -140,7 +156,6 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
     case "CONFIRM_TURN": {
       if (state.phase !== "playing") return state;
       const darts = confirmedDarts(state.currentSlots);
-      if (darts.length === 0) return state;
 
       const activeIdx = state.activePlayer;
       const player = state.players[activeIdx];
@@ -196,41 +211,7 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
       };
     }
 
-    // Manueller Bust: die bereits eingegebenen Darts dieser Aufnahme zählen als
-    // geworfen (für die Statistik), der Punktestand bleibt aber unverändert.
-    case "FORCE_BUST": {
-      if (state.phase !== "playing") return state;
-      const darts = confirmedDarts(state.currentSlots);
-      if (darts.length === 0) return state;
-
-      const activeIdx = state.activePlayer;
-      const player = state.players[activeIdx];
-
-      const turn: Turn = {
-        darts,
-        scoreBefore: player.remaining,
-        scoreAfter: player.remaining,
-        bust: true,
-      };
-
-      const updatedPlayer: PlayerState = {
-        ...player,
-        turns: [...player.turns, turn],
-      };
-
-      const players: [PlayerState, PlayerState] =
-        activeIdx === 0 ? [updatedPlayer, state.players[1]] : [state.players[0], updatedPlayer];
-
-      return {
-        ...state,
-        players,
-        currentSlots: emptySlots(),
-        activePlayer: activeIdx === 0 ? 1 : 0,
-      };
-    }
-
-    // Korrigiert die zuletzt bestätigte Aufnahme (egal ob normal oder Bust):
-    // die Aufnahme wird aus der Historie entfernt, der Punktestand des
+    // Korrigiert die zuletzt bestätigte Aufnahme: die Aufnahme wird aus der Historie entfernt, der Punktestand des
     // betroffenen Spielers zurückgesetzt, die Darts wandern zurück in die
     // aktuelle Eingabe, damit sie neu eingegeben werden können.
     case "UNDO_LAST_TURN": {
@@ -238,7 +219,8 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
       const lastPlayerIdx: 0 | 1 = state.activePlayer === 0 ? 1 : 0;
       const player = state.players[lastPlayerIdx];
       if (player.turns.length === 0) return state;
-      if (confirmedDarts(state.currentSlots).length > 0) return state; // erst laufende Eingabe klären
+      const hasPendingInput = state.currentSlots.some((s) => s.segment !== null);
+      if (hasPendingInput) return state; // erst laufende Eingabe klären
 
       const lastTurn = player.turns[player.turns.length - 1];
       const updatedPlayer: PlayerState = {

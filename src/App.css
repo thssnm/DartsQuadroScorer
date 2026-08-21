@@ -427,41 +427,15 @@ body {
   cursor: not-allowed;
 }
 
-.dart-input__actionrow {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
-}
-
-.action-btn {
-  padding: 16px 0;
-  background: var(--bg-box);
-  border: 1px solid var(--border);
+.confirm-btn-wide {
+  padding: 18px 0;
+  background: #14602a;
+  border: 1px solid #1e8a3e;
   border-radius: 8px;
   color: var(--text);
-  font-size: 1.2rem;
+  font-size: 1.4rem;
   font-weight: bold;
   cursor: pointer;
-}
-
-.action-btn.noscore-btn {
-  color: var(--text-dim);
-}
-
-.action-btn.bust-btn {
-  background: #4a1414;
-  border-color: var(--red-bright);
-}
-
-.action-btn.confirm-btn {
-  background: #14602a;
-  border-color: #1e8a3e;
-  font-size: 1.6rem;
-}
-
-.action-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
 }
 
 /* ---------- Leg / Match finished ---------- */
