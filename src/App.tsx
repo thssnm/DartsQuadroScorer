@@ -61,7 +61,7 @@ function App() {
   }
 
   // Der Spieler, der zuletzt geworfen hat, ist NICHT state.activePlayer
-  // (activePlayer wurde nach CONFIRM_TURN/FORCE_BUST bereits gewechselt).
+  // (activePlayer wurde nach CONFIRM_TURN bereits gewechselt).
   const lastThrowerIdx: 0 | 1 = state.activePlayer === 0 ? 1 : 0;
   const canUndo = state.players[lastThrowerIdx].turns.length > 0;
 
@@ -88,7 +88,6 @@ function App() {
         }
         onClearSlot={(index) => dispatch({ type: "CLEAR_SLOT", index })}
         onConfirmTurn={() => dispatch({ type: "CONFIRM_TURN" })}
-        onBust={() => dispatch({ type: "FORCE_BUST" })}
         onUndo={() => dispatch({ type: "UNDO_LAST_TURN" })}
         canUndo={canUndo}
       />

@@ -7,7 +7,6 @@ interface DartInputProps {
   onSetMultiplier: (index: number, multiplier: Multiplier) => void;
   onClearSlot: (index: number) => void;
   onConfirmTurn: () => void;
-  onBust: () => void;
   onUndo: () => void;
   canUndo: boolean;
 }
@@ -24,7 +23,6 @@ export const DartInput = ({
   onSetMultiplier,
   onClearSlot,
   onConfirmTurn,
-  onBust,
   onUndo,
   canUndo,
 }: DartInputProps) => {
@@ -44,11 +42,6 @@ export const DartInput = ({
   const handleNumber = (segment: number) => {
     if (effectiveIndex === null) return;
     onSetSegment(effectiveIndex, segment);
-  };
-
-  const handleNoScore = () => {
-    if (effectiveIndex === null) return;
-    onSetSegment(effectiveIndex, 0);
   };
 
   return (
@@ -94,17 +87,9 @@ export const DartInput = ({
         ))}
       </div>
 
-      <div className="dart-input__actionrow">
-        <button className="action-btn noscore-btn" onClick={handleNoScore} disabled={effectiveIndex === null}>
-          NO SCORE
-        </button>
-        <button className="action-btn bust-btn" onClick={onBust} disabled={!hasAnyDart}>
-          BUST
-        </button>
-        <button className="action-btn confirm-btn" onClick={onConfirmTurn} disabled={!hasAnyDart}>
-          ✓
-        </button>
-      </div>
+      <button className="confirm-btn-wide" onClick={onConfirmTurn}>
+        ✓ Aufnahme bestätigen
+      </button>
     </div>
   );
 };
