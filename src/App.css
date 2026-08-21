@@ -331,6 +331,11 @@ body {
   outline: 2px solid var(--red-bright);
 }
 
+.dart-column.finish {
+  background: rgba(30, 138, 62, 0.18);
+  outline: 2px solid #1e8a3e;
+}
+
 .dart-column__multipliers {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
