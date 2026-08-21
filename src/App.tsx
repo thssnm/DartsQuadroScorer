@@ -1,12 +1,27 @@
-import { useReducer } from "react";
+import { useEffect, useReducer, useState } from "react";
 import { createInitialState, gameReducer } from "./game/gameReducer";
 import { SetupScreen } from "./components/SetupScreen";
 import { Scoreboard } from "./components/Scoreboard";
 import { DartInput } from "./components/DartInput";
+import { MatchStats } from "./components/MatchStats";
 import "./App.css";
+
+const MATCH_OVERLAY_DURATION_MS = 2500;
 
 function App() {
   const [state, dispatch] = useReducer(gameReducer, createInitialState("Heim", "Gast", 2));
+  const [showMatchStats, setShowMatchStats] = useState(false);
+
+  // Nach Spielende kurz das Sieg-Overlay zeigen, dann automatisch zur
+  // Statistik-Seite weiterleiten.
+  useEffect(() => {
+    if (state.phase === "match-finished") {
+      setShowMatchStats(false);
+      const timer = setTimeout(() => setShowMatchStats(true), MATCH_OVERLAY_DURATION_MS);
+      return () => clearTimeout(timer);
+    }
+    setShowMatchStats(false);
+  }, [state.phase]);
 
   if (state.phase === "setup") {
     return (
@@ -20,50 +35,38 @@ function App() {
     );
   }
 
-  if (state.phase === "match-finished") {
-    const winner =
-      state.players[0].legsWon > state.players[1].legsWon ? state.players[0] : state.players[1];
+  if (state.phase === "match-finished" && showMatchStats) {
     return (
-      <div className="match-finished">
-        <h1>{winner.name} gewinnt das Match!</h1>
-        <p>
-          {state.players[0].name} {state.players[0].legsWon} : {state.players[1].legsWon}{" "}
-          {state.players[1].name}
-        </p>
-        <button
-          onClick={() =>
-            dispatch({
-              type: "RESET_MATCH",
-              nameA: state.players[0].name,
-              nameB: state.players[1].name,
-              legsToWin: state.legsToWin,
-            })
-          }
-        >
-          Neues Match
-        </button>
-      </div>
+      <MatchStats
+        state={state}
+        onNewMatch={() =>
+          dispatch({
+            type: "RESET_MATCH",
+            nameA: state.players[0].name,
+            nameB: state.players[1].name,
+            legsToWin: state.legsToWin,
+          })
+        }
+      />
     );
   }
 
-  if (state.phase === "leg-finished") {
-    const legWinner = state.players[0].remaining === 0 ? state.players[0] : state.players[1];
-    return (
-      <div className="leg-finished">
-        <h1>{legWinner.name} gewinnt das Leg!</h1>
-        <p>
-          Legs: {state.players[0].name} {state.players[0].legsWon} : {state.players[1].legsWon}{" "}
-          {state.players[1].name}
-        </p>
-        <button onClick={() => dispatch({ type: "NEXT_LEG" })}>Nächstes Leg</button>
-      </div>
-    );
-  }
-
-  // Der Spieler, der zuletzt geworfen hat, ist NICHT state.activePlayer
-  // (activePlayer wurde nach CONFIRM_TURN bereits gewechselt).
   const lastThrowerIdx: 0 | 1 = state.activePlayer === 0 ? 1 : 0;
   const canUndo = state.players[lastThrowerIdx].turns.length > 0;
+
+  const legWinnerForOverlay =
+    state.phase === "leg-finished"
+      ? state.players[0].remaining === 0
+        ? state.players[0]
+        : state.players[1]
+      : null;
+
+  const matchWinnerForOverlay =
+    state.phase === "match-finished"
+      ? state.players[0].legsWon > state.players[1].legsWon
+        ? state.players[0]
+        : state.players[1]
+      : null;
 
   return (
     <div className="app">
@@ -79,7 +82,10 @@ function App() {
           Spiel abbrechen
         </button>
       </div>
-      <Scoreboard state={state} />
+      <Scoreboard
+        state={state}
+        onEditTurn={(playerIndex, turnIndex) => dispatch({ type: "EDIT_TURN", playerIndex, turnIndex })}
+      />
       <DartInput
         slots={state.currentSlots}
         onSetSegment={(index, segment) => dispatch({ type: "SET_SLOT_SEGMENT", index, segment })}
@@ -91,6 +97,32 @@ function App() {
         onUndo={() => dispatch({ type: "UNDO_LAST_TURN" })}
         canUndo={canUndo}
       />
+
+      {legWinnerForOverlay && (
+        <div className="leg-overlay">
+          <div className="leg-overlay__card">
+            <h1>{legWinnerForOverlay.name} gewinnt das Leg!</h1>
+            <p>
+              Legs: {state.players[0].name} {state.players[0].legsWon} : {state.players[1].legsWon}{" "}
+              {state.players[1].name}
+            </p>
+            <button onClick={() => dispatch({ type: "NEXT_LEG" })}>Nächstes Leg</button>
+          </div>
+        </div>
+      )}
+
+      {matchWinnerForOverlay && (
+        <div className="leg-overlay">
+          <div className="leg-overlay__card">
+            <h1>{matchWinnerForOverlay.name} gewinnt das Match!</h1>
+            <p>
+              {state.players[0].name} {state.players[0].legsWon} : {state.players[1].legsWon}{" "}
+              {state.players[1].name}
+            </p>
+            <p className="leg-overlay__hint">Statistik wird geladen …</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
