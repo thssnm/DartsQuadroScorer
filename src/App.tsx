@@ -88,6 +88,7 @@ function App() {
       />
       <DartInput
         slots={state.currentSlots}
+        remaining={state.players[state.activePlayer].remaining}
         onSetSegment={(index, segment) => dispatch({ type: "SET_SLOT_SEGMENT", index, segment })}
         onSetMultiplier={(index, multiplier) =>
           dispatch({ type: "SET_SLOT_MULTIPLIER", index, multiplier })

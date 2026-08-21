@@ -1,8 +1,9 @@
 import type { DartSlot, Multiplier } from "../game/types";
-import { dartValue, isSlotComplete, turnTotal } from "../game/types";
+import { dartValue, isDoubleFinish, isSlotComplete, turnTotal } from "../game/types";
 
 interface DartInputProps {
   slots: [DartSlot, DartSlot, DartSlot];
+  remaining: number;
   onSetSegment: (index: number, segment: number) => void;
   onSetMultiplier: (index: number, multiplier: Multiplier) => void;
   onClearSlot: (index: number) => void;
@@ -19,6 +20,7 @@ const NUMBERS = [
 
 export const DartInput = ({
   slots,
+  remaining,
   onSetSegment,
   onSetMultiplier,
   onClearSlot,
@@ -38,6 +40,32 @@ export const DartInput = ({
     multiplier: s.multiplier,
   }));
   const runningTotal = turnTotal(completedDarts);
+
+  // Live-Vorschau: nach welchem Slot (falls überhaupt) wäre das Leg mit den
+  // bisher eingegebenen Darts beendet? Nur der letzte tatsächlich gesetzte
+  // Dart zählt für die Double-Out-Prüfung - Slots davor werden ignoriert,
+  // falls dazwischen noch ein leerer Slot liegt (Reihenfolge egal).
+  let finishSlotIndex: number | null = null;
+  {
+    let runningSum = 0;
+    let lastFilledIndex: number | null = null;
+    for (let i = 0; i < slots.length; i++) {
+      const slot = slots[i];
+      if (!isSlotComplete(slot)) continue;
+      runningSum += dartValue({ segment: slot.segment, multiplier: slot.multiplier });
+      lastFilledIndex = i;
+      if (
+        runningSum === remaining &&
+        isDoubleFinish({ segment: slot.segment, multiplier: slot.multiplier })
+      ) {
+        finishSlotIndex = i;
+      } else {
+        finishSlotIndex = null;
+      }
+    }
+    // Nur relevant, wenn der Finish-Dart auch der zuletzt gesetzte ist.
+    if (finishSlotIndex !== lastFilledIndex) finishSlotIndex = null;
+  }
 
   const handleNumber = (segment: number) => {
     if (effectiveIndex === null) return;
@@ -68,6 +96,7 @@ export const DartInput = ({
             key={i}
             slot={slots[i]}
             isActive={i === effectiveIndex}
+            isFinish={i === finishSlotIndex}
             onSetMultiplier={(m) => onSetMultiplier(i, m)}
             onClear={() => onClearSlot(i)}
           />
@@ -97,17 +126,22 @@ export const DartInput = ({
 interface DartColumnProps {
   slot: DartSlot;
   isActive: boolean;
+  isFinish: boolean;
   onSetMultiplier: (m: Multiplier) => void;
   onClear: () => void;
 }
 
-const DartColumn = ({ slot, isActive, onSetMultiplier, onClear }: DartColumnProps) => {
+const DartColumn = ({ slot, isActive, isFinish, onSetMultiplier, onClear }: DartColumnProps) => {
   const isBull = slot.segment === 25;
   const isMiss = slot.segment === 0;
-  const canMultiply = slot.segment !== null && !isMiss;
+  // Multiplikator ist klickbar, wenn der Slot der aktuell aktive (offene)
+  // Slot ist - auch BEVOR eine Zahl gesetzt wurde (Multiplikator zuerst,
+  // Zahl danach) - oder wenn bereits eine Zahl gesetzt ist (nachträgliche
+  // Korrektur). Nur bei Miss (0) bleibt der Multiplikator gesperrt.
+  const canMultiply = !isMiss && (isActive || slot.segment !== null);
 
   return (
-    <div className={`dart-column ${isActive ? "active" : ""}`}>
+    <div className={`dart-column ${isActive ? "active" : ""} ${isFinish ? "finish" : ""}`}>
       <div className="dart-column__multipliers">
         {[2, 3, 4].map((m) => (
           <button
