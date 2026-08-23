@@ -1,5 +1,6 @@
 import { useEffect, useReducer, useState } from "react";
 import { createInitialState, gameReducer } from "./game/gameReducer";
+import { loadGameState, saveGameState, clearGameState, isResumableState } from "./game/persistence";
 import { SetupScreen } from "./components/SetupScreen";
 import { Scoreboard } from "./components/Scoreboard";
 import { DartInput } from "./components/DartInput";
@@ -9,8 +10,24 @@ import "./App.css";
 const MATCH_OVERLAY_DURATION_MS = 2500;
 
 function App() {
-  const [state, dispatch] = useReducer(gameReducer, createInitialState("Heim", "Gast", 2));
+  const [state, dispatch] = useReducer(gameReducer, undefined, () => {
+    const saved = loadGameState();
+    if (saved && isResumableState(saved)) return saved;
+    return createInitialState("Heim", "Gast", 2);
+  });
   const [showMatchStats, setShowMatchStats] = useState(false);
+
+  // Läuft ein Spiel (nicht mehr im Setup), wird jede Änderung sofort
+  // gespeichert - so übersteht der Spielstand einen Reload oder das
+  // Schließen der App. Landet die Phase wieder bei "setup" (z.B. nach
+  // Abbrechen oder Reset), wird der gespeicherte Stand gelöscht.
+  useEffect(() => {
+    if (state.phase === "setup") {
+      clearGameState();
+    } else {
+      saveGameState(state);
+    }
+  }, [state]);
 
   // Nach Spielende kurz das Sieg-Overlay zeigen, dann automatisch zur
   // Statistik-Seite weiterleiten.
