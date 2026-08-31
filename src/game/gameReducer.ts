@@ -47,10 +47,18 @@ interface TurnOutcome {
 
 // Berechnet das Ergebnis einer Aufnahme nach Double-Out-Regeln.
 // Bust wenn: Rest < 0, Rest === 1, oder Rest === 0 aber letzter Dart kein Double.
-export const evaluateTurn = (remaining: number, darts: Dart[]): TurnOutcome => {
+// lastRealDartIndex gibt an, welcher der 3 Darts der zuletzt tatsächlich
+// EINGEGEBENE war (nicht zwangsläufig darts[2] - Slots können mit 0
+// aufgefüllt sein, wenn z.B. nur Dart 1 und 3 ausgefüllt wurden). Für die
+// Double-Out-Prüfung zählt dieser Dart, nicht der letzte in der Reihe.
+export const evaluateTurn = (
+  remaining: number,
+  darts: Dart[],
+  lastRealDartIndex: number = darts.length - 1
+): TurnOutcome => {
   const thrown = turnTotal(darts);
   const newRemaining = remaining - thrown;
-  const lastDart = darts[darts.length - 1];
+  const lastDart = darts[lastRealDartIndex];
 
   if (newRemaining < 0 || newRemaining === 1) {
     return { scoreAfter: remaining, bust: true, legWon: false };
@@ -72,24 +80,20 @@ const clampMultiplier = (segment: number | null, multiplier: Multiplier): Multip
   return multiplier;
 };
 
-// Wandelt die aktuellen Slots in Darts um.
-// - Sind ALLE 3 Slots leer, gilt das als sofortiges Bestätigen ohne Eingabe
-//   und wird als 0/0/0 gewertet (3 geworfene Fehlwürfe).
-// - Sind 1-2 Slots befüllt und der Rest leer (z.B. Leg-Ende nach 2 Darts),
-//   zählen NUR die tatsächlich eingegebenen Darts - kein Auffüllen mit 0.
-//   Das ist wichtig für die Double-Out-Prüfung: der letzte eingegebene Dart
-//   muss der letzte in der Liste bleiben, sonst würde ein automatisch
-//   angehängter Fehlwurf ein gültiges Finish verdecken.
-const confirmedDarts = (slots: [DartSlot, DartSlot, DartSlot]): Dart[] => {
-  const filled = slots.filter(isSlotComplete).map((s) => slotToDart(s) as Dart);
-  if (filled.length === 0) {
-    return [
-      { segment: 0, multiplier: 1 },
-      { segment: 0, multiplier: 1 },
-      { segment: 0, multiplier: 1 },
-    ];
+// Wandelt die aktuellen Slots in vollständige Darts um. Jede der 3
+// Positionen wird zurückgegeben - unbefüllte Slots werden mit 0 (Fehlwurf)
+// aufgefüllt, egal an welcher Position sie liegen. Das erhält die Reihen-
+// folge für die Anzeige (54 54 20 statt nur 54 54 20 ohne Lücken).
+const confirmedDarts = (slots: [DartSlot, DartSlot, DartSlot]): Dart[] =>
+  slots.map((s) => (isSlotComplete(s) ? (slotToDart(s) as Dart) : { segment: 0, multiplier: 1 as Multiplier }));
+
+// Index des zuletzt tatsächlich AUSGEFÜLLTEN Slots (nicht des letzten in
+// der Reihe) - relevant für die Double-Out-Prüfung. -1 wenn alle leer.
+const lastFilledSlotIndex = (slots: [DartSlot, DartSlot, DartSlot]): number => {
+  for (let i = slots.length - 1; i >= 0; i--) {
+    if (isSlotComplete(slots[i])) return i;
   }
-  return filled;
+  return -1;
 };
 
 export const gameReducer = (state: GameState, action: GameAction): GameState => {
@@ -157,10 +161,11 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
     case "CONFIRM_TURN": {
       if (state.phase !== "playing") return state;
       const darts = confirmedDarts(state.currentSlots);
+      const lastRealIdx = lastFilledSlotIndex(state.currentSlots);
 
       const activeIdx = state.activePlayer;
       const player = state.players[activeIdx];
-      const outcome = evaluateTurn(player.remaining, darts);
+      const outcome = evaluateTurn(player.remaining, darts, lastRealIdx === -1 ? 2 : lastRealIdx);
       const turn: Turn = {
         darts,
         scoreBefore: player.remaining,
