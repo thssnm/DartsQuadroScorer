@@ -319,6 +319,7 @@ body {
 }
 
 .dart-column {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -378,13 +379,27 @@ body {
   cursor: pointer;
 }
 
-.dart-column__value:not(:disabled) {
+.dart-column__value.filled {
   color: var(--text);
   border-color: var(--red-bright);
 }
 
-.dart-column__value:disabled {
-  cursor: default;
+.dart-column__clear {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--red);
+  border: 1px solid var(--red-bright);
+  color: var(--text);
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .dart-input__summary {
@@ -404,6 +419,16 @@ body {
   font-size: 1.4rem;
   font-weight: bold;
   color: var(--text);
+}
+
+.summary-remaining {
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: var(--text-dim);
+}
+
+.summary-remaining::before {
+  content: "→ ";
 }
 
 .undo-inline-btn {
