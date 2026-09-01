@@ -53,6 +53,13 @@ export interface GameState {
   startingPlayer: 0 | 1;
   legsToWin: number; // z.B. 2 bei "Best of 3"
   currentSlots: [DartSlot, DartSlot, DartSlot]; // die 3 Darts der laufenden Aufnahme
+  // Ist gesetzt, während eine bereits bestätigte Aufnahme gerade bearbeitet
+  // wird (Klick in der Score-Liste). currentSlots zeigt in diesem Fall die
+  // Darts dieser Aufnahme zur Korrektur, nicht eine neue Eingabe.
+  editingTurn: { playerIndex: 0 | 1; turnIndex: number } | null;
+  // Kurzlebige Fehlermeldung, z.B. wenn eine Korrektur eine spätere
+  // Aufnahme rechnerisch unmöglich machen würde.
+  editError: string | null;
 }
 
 export const dartValue = (dart: Dart): number => {

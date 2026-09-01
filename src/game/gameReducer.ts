@@ -24,6 +24,8 @@ export const createInitialState = (
   startingPlayer: 0,
   legsToWin,
   currentSlots: emptySlots(),
+  editingTurn: null,
+  editError: null,
 });
 
 export type GameAction =
@@ -35,6 +37,9 @@ export type GameAction =
   | { type: "CONFIRM_TURN" }
   | { type: "UNDO_LAST_TURN" }
   | { type: "EDIT_TURN"; playerIndex: 0 | 1; turnIndex: number }
+  | { type: "CONFIRM_EDIT" }
+  | { type: "CANCEL_EDIT" }
+  | { type: "DISMISS_EDIT_ERROR" }
   | { type: "NEXT_LEG" }
   | { type: "ABORT_MATCH" }
   | { type: "RESET_MATCH"; nameA: string; nameB: string; legsToWin: number };
@@ -84,12 +89,12 @@ const clampMultiplier = (segment: number | null, multiplier: Multiplier): Multip
 // Positionen wird zurückgegeben - unbefüllte Slots werden mit 0 (Fehlwurf)
 // aufgefüllt, egal an welcher Position sie liegen. Das erhält die Reihen-
 // folge für die Anzeige (54 54 20 statt nur 54 54 20 ohne Lücken).
-const confirmedDarts = (slots: [DartSlot, DartSlot, DartSlot]): Dart[] =>
+export const confirmedDarts = (slots: [DartSlot, DartSlot, DartSlot]): Dart[] =>
   slots.map((s) => (isSlotComplete(s) ? (slotToDart(s) as Dart) : { segment: 0, multiplier: 1 as Multiplier }));
 
 // Index des zuletzt tatsächlich AUSGEFÜLLTEN Slots (nicht des letzten in
 // der Reihe) - relevant für die Double-Out-Prüfung. -1 wenn alle leer.
-const lastFilledSlotIndex = (slots: [DartSlot, DartSlot, DartSlot]): number => {
+export const lastFilledSlotIndex = (slots: [DartSlot, DartSlot, DartSlot]): number => {
   for (let i = slots.length - 1; i >= 0; i--) {
     if (isSlotComplete(slots[i])) return i;
   }
@@ -159,7 +164,7 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
     }
 
     case "CONFIRM_TURN": {
-      if (state.phase !== "playing") return state;
+      if (state.phase !== "playing" || state.editingTurn) return state;
       const darts = confirmedDarts(state.currentSlots);
       const lastRealIdx = lastFilledSlotIndex(state.currentSlots);
 
@@ -223,7 +228,7 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
     // Mehrfach hintereinander drückbar - eine eventuell laufende Eingabe
     // wird dabei verworfen zugunsten der letzten bestätigten Aufnahme.
     case "UNDO_LAST_TURN": {
-      if (state.phase !== "playing") return state;
+      if (state.phase !== "playing" || state.editingTurn) return state;
       const lastPlayerIdx: 0 | 1 = state.activePlayer === 0 ? 1 : 0;
       const player = state.players[lastPlayerIdx];
       if (player.turns.length === 0) return state;
@@ -252,28 +257,15 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
     }
 
     // Öffnet eine beliebige Aufnahme des AKTUELL LAUFENDEN Legs erneut zur
-    // Bearbeitung (Klick in der Score-Liste). Diese Aufnahme und alle danach
-    // folgenden werden aus der Historie entfernt (müssen neu geworfen
-    // werden), der Punktestand wird auf den Stand vor der bearbeiteten
-    // Aufnahme zurückgesetzt, deren Darts wandern in die aktuelle Eingabe.
+    // Bearbeitung (Klick in der Score-Liste). Die Darts dieser Aufnahme
+    // wandern zur Bearbeitung in currentSlots - alle anderen Aufnahmen
+    // bleiben unangetastet, bis CONFIRM_EDIT bestätigt wird.
     // Bereits abgeschlossene Legs (legHistory) sind davon nicht betroffen.
     case "EDIT_TURN": {
-      if (state.phase !== "playing") return state;
+      if (state.phase !== "playing" || state.editingTurn) return state;
       const player = state.players[action.playerIndex];
       const targetTurn = player.turns[action.turnIndex];
       if (!targetTurn) return state;
-
-      const updatedPlayer: PlayerState = {
-        ...player,
-        remaining: targetTurn.scoreBefore,
-        turns: player.turns.slice(0, action.turnIndex),
-      };
-
-      // Der jeweils andere Spieler wird nicht verändert - seine bereits
-      // geworfenen Aufnahmen in diesem Leg bleiben unangetastet, auch wenn
-      // sie zeitlich nach der bearbeiteten Aufnahme kamen.
-      const players: [PlayerState, PlayerState] =
-        action.playerIndex === 0 ? [updatedPlayer, state.players[1]] : [state.players[0], updatedPlayer];
 
       const restoredSlots = emptySlots();
       targetTurn.darts.forEach((d, i) => {
@@ -282,9 +274,129 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
 
       return {
         ...state,
-        players,
-        activePlayer: action.playerIndex,
         currentSlots: restoredSlots,
+        editingTurn: { playerIndex: action.playerIndex, turnIndex: action.turnIndex },
+        editError: null,
+      };
+    }
+
+    case "CANCEL_EDIT": {
+      if (!state.editingTurn) return state;
+      return { ...state, currentSlots: emptySlots(), editingTurn: null };
+    }
+
+    case "DISMISS_EDIT_ERROR": {
+      return { ...state, editError: null };
+    }
+
+    // Übernimmt die bearbeiteten Darts einer bereits bestätigten Aufnahme.
+    // Nur diese eine Aufnahme wird ersetzt - alle folgenden Aufnahmen des
+    // Spielers bleiben mit ihren eigenen Darts erhalten, ihre Restpunktzahl-
+    // Kette (scoreBefore/scoreAfter/bust) wird ab hier neu durchgerechnet.
+    // Würde dabei eine spätere Aufnahme rechnerisch unmöglich (negativer
+    // Rest, oder ein Leg-Sieg der jetzt an anderer Stelle läge), wird die
+    // gesamte Änderung verworfen und editError gesetzt.
+    case "CONFIRM_EDIT": {
+      if (state.phase !== "playing" || !state.editingTurn) return state;
+      const { playerIndex, turnIndex } = state.editingTurn;
+      const player = state.players[playerIndex];
+      const targetTurn = player.turns[turnIndex];
+      if (!targetTurn) return { ...state, editingTurn: null, currentSlots: emptySlots() };
+
+      const newDarts = confirmedDarts(state.currentSlots);
+      const lastRealIdx = lastFilledSlotIndex(state.currentSlots);
+
+      // Kette ab turnIndex neu durchrechnen: der bearbeitete Turn und alle
+      // danach behalten ihre bisherigen Darts (außer dem bearbeiteten
+      // selbst), aber scoreBefore/scoreAfter/bust werden frisch berechnet.
+      const scoreBeforeEdit = targetTurn.scoreBefore;
+      const recalculated: Turn[] = [];
+      let runningScore = scoreBeforeEdit;
+      let invalidReason: string | null = null;
+
+      for (let i = turnIndex; i < player.turns.length; i++) {
+        const darts = i === turnIndex ? newDarts : player.turns[i].darts;
+        const lastIdx = i === turnIndex ? (lastRealIdx === -1 ? 2 : lastRealIdx) : darts.length - 1;
+        if (i > turnIndex && runningScore - turnTotal(darts) < 0) {
+          invalidReason = "Diese Änderung würde eine spätere Aufnahme unmöglich machen.";
+          break;
+        }
+        const outcome = evaluateTurn(runningScore, darts, lastIdx);
+
+        // Ein Leg-Sieg (Rest 0 mit gültigem Double) darf nur beim
+        // ursprünglich letzten Turn des Legs auftreten - taucht er jetzt
+        // schon früher oder gar nicht mehr an der ursprünglichen Stelle
+        // auf, ist die neue Kette inkonsistent mit dem Rest des Legs.
+        const isOriginallyLastTurn = i === player.turns.length - 1;
+        const wouldWinLeg = outcome.scoreAfter === 0 && !outcome.bust;
+        if (wouldWinLeg && !isOriginallyLastTurn) {
+          invalidReason = "Diese Änderung würde das Leg vorzeitig beenden.";
+          break;
+        }
+
+        recalculated.push({
+          darts,
+          scoreBefore: runningScore,
+          scoreAfter: outcome.scoreAfter,
+          bust: outcome.bust,
+        });
+        runningScore = outcome.scoreAfter;
+      }
+
+      if (invalidReason) {
+        return { ...state, editError: invalidReason };
+      }
+
+      const legJustWon = recalculated.length > 0 && recalculated[recalculated.length - 1].scoreAfter === 0;
+
+      const updatedPlayer: PlayerState = {
+        ...player,
+        remaining: runningScore,
+        turns: [...player.turns.slice(0, turnIndex), ...recalculated],
+      };
+
+      // War die bearbeitete Aufnahme (bzw. eine der neu durchgerechneten
+      // danach) jetzt tatsächlich ein gültiges Finish, muss derselbe
+      // Leg-Abschluss wie bei einer regulär bestätigten Aufnahme greifen:
+      // Leg in die Historie verschieben, legsWon erhöhen, Phase wechseln.
+      if (legJustWon) {
+        const finishedPlayer: PlayerState = {
+          ...updatedPlayer,
+          legsWon: updatedPlayer.legsWon + 1,
+          legHistory: [...updatedPlayer.legHistory, { turns: updatedPlayer.turns, won: true }],
+          turns: [],
+        };
+        const otherIdx: 0 | 1 = playerIndex === 0 ? 1 : 0;
+        const otherPlayer = state.players[otherIdx];
+        const finishedOther: PlayerState = {
+          ...otherPlayer,
+          legHistory: [...otherPlayer.legHistory, { turns: otherPlayer.turns, won: false }],
+          turns: [],
+        };
+        const finalPlayers: [PlayerState, PlayerState] =
+          playerIndex === 0 ? [finishedPlayer, finishedOther] : [finishedOther, finishedPlayer];
+
+        const matchWon = finishedPlayer.legsWon >= state.legsToWin;
+
+        return {
+          ...state,
+          players: finalPlayers,
+          currentSlots: emptySlots(),
+          editingTurn: null,
+          editError: null,
+          phase: matchWon ? "match-finished" : "leg-finished",
+        };
+      }
+
+      const players: [PlayerState, PlayerState] =
+        playerIndex === 0 ? [updatedPlayer, state.players[1]] : [state.players[0], updatedPlayer];
+
+      return {
+        ...state,
+        players,
+        currentSlots: emptySlots(),
+        editingTurn: null,
+        editError: null,
       };
     }
 
