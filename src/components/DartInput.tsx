@@ -43,9 +43,8 @@ export const DartInput = ({
 
   // Sobald eine neue, komplett leere Aufnahme beginnt, springt der Fokus
   // zurück auf Slot 1 (links) - unabhängig davon, wo er zuvor stand.
-  // Ansonsten springt er automatisch zum nächsten offenen Slot weiter,
-  // sobald der aktuell ausgewählte befüllt wird (normales 1-2-3-Eingeben
-  // spart sich damit einen Tap pro Dart).
+  // Ansonsten springt er automatisch zum nächsten offenen Slot von links
+  // nach rechts weiter, sobald der aktuell ausgewählte befüllt wird.
   useEffect(() => {
     if (allEmpty) {
       setSelectedSlot(0);
@@ -124,7 +123,6 @@ export const DartInput = ({
           <DartColumn
             key={i}
             slot={slots[i]}
-            isActive={i === selectedSlot}
             isFinish={i === finishSlotIndex}
             onSelect={() => setSelectedSlot(i)}
             onSetMultiplier={(m) => {
@@ -153,20 +151,19 @@ export const DartInput = ({
 
 interface DartColumnProps {
   slot: DartSlot;
-  isActive: boolean;
   isFinish: boolean;
   onSelect: () => void;
   onSetMultiplier: (m: Multiplier) => void;
   onClear: () => void;
 }
 
-const DartColumn = ({ slot, isActive, isFinish, onSelect, onSetMultiplier, onClear }: DartColumnProps) => {
+const DartColumn = ({ slot, isFinish, onSelect, onSetMultiplier, onClear }: DartColumnProps) => {
   const isBull = slot.segment === 25;
   const isMiss = slot.segment === 0;
   const canMultiply = !isMiss;
 
   return (
-    <div className={`dart-column ${isActive ? "active" : ""} ${isFinish ? "finish" : ""}`}>
+    <div className={`dart-column ${isFinish ? "finish" : ""}`}>
       <div className="dart-column__multipliers">
         {[2, 3, 4].map((m) => (
           <button
