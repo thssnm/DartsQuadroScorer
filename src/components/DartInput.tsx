@@ -11,6 +11,8 @@ interface DartInputProps {
   onConfirmTurn: () => void;
   onUndo: () => void;
   canUndo: boolean;
+  isEditing: boolean;
+  onCancelEdit: () => void;
 }
 
 const NUMBERS = [
@@ -28,6 +30,8 @@ export const DartInput = ({
   onConfirmTurn,
   onUndo,
   canUndo,
+  isEditing,
+  onCancelEdit,
 }: DartInputProps) => {
   // Welcher Slot ist gerade zur Eingabe ausgewählt. Jeder der 3 Slots ist
   // jederzeit direkt antippbar (Reihenfolge egal) - Klick auf eine Spalte
@@ -92,6 +96,12 @@ export const DartInput = ({
 
   return (
     <div className="dart-input">
+      {isEditing && (
+        <div className="dart-input__edit-banner">
+          <span>Aufnahme wird korrigiert</span>
+          <button onClick={onCancelEdit}>Abbrechen</button>
+        </div>
+      )}
       <div className="dart-input__summary">
         {[0, 1, 2].map((i) => {
           const slot = slots[i];
@@ -135,7 +145,7 @@ export const DartInput = ({
       </div>
 
       <button className="confirm-btn-wide" onClick={onConfirmTurn}>
-        ✓ Aufnahme bestätigen
+        {isEditing ? "✓ Korrektur übernehmen" : "✓ Aufnahme bestätigen"}
       </button>
     </div>
   );
