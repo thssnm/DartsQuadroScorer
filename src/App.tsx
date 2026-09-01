@@ -16,6 +16,7 @@ function App() {
     return createInitialState("Heim", "Gast", 2);
   });
   const [showMatchStats, setShowMatchStats] = useState(false);
+  const matchFinished = state.phase === "match-finished";
 
   // Läuft ein Spiel (nicht mehr im Setup), wird jede Änderung sofort
   // gespeichert - so übersteht der Spielstand einen Reload oder das
@@ -32,18 +33,17 @@ function App() {
   // Nach Spielende kurz das Sieg-Overlay zeigen, dann automatisch zur
   // Statistik-Seite weiterleiten.
   useEffect(() => {
-    if (state.phase === "match-finished") {
-      setShowMatchStats(false);
+    if (matchFinished) {
       const timer = setTimeout(() => setShowMatchStats(true), MATCH_OVERLAY_DURATION_MS);
       return () => clearTimeout(timer);
     }
-    setShowMatchStats(false);
-  }, [state.phase]);
+  }, [matchFinished]);
 
   if (state.phase === "setup") {
     return (
       <SetupScreen
         onStart={(nameA, nameB, legsToWin, startingPlayer) => {
+          setShowMatchStats(false);
           dispatch({ type: "RESET_MATCH", nameA, nameB, legsToWin });
           if (startingPlayer === 1) dispatch({ type: "SWITCH_STARTING_PLAYER" });
           dispatch({ type: "START_MATCH" });
@@ -52,18 +52,19 @@ function App() {
     );
   }
 
-  if (state.phase === "match-finished" && showMatchStats) {
+  if (matchFinished && showMatchStats) {
     return (
       <MatchStats
         state={state}
-        onNewMatch={() =>
+        onNewMatch={() => {
+          setShowMatchStats(false);
           dispatch({
             type: "RESET_MATCH",
             nameA: state.players[0].name,
             nameB: state.players[1].name,
             legsToWin: state.legsToWin,
-          })
-        }
+          });
+        }}
       />
     );
   }
@@ -87,7 +88,7 @@ function App() {
       : null;
 
   const matchWinnerForOverlay =
-    state.phase === "match-finished"
+    matchFinished
       ? state.players[0].legsWon > state.players[1].legsWon
         ? state.players[0]
         : state.players[1]
