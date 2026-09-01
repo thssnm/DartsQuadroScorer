@@ -318,6 +318,29 @@ body {
   width: 100%;
 }
 
+.dart-input__edit-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(224, 160, 32, 0.15);
+  border: 1px solid #e0a020;
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #e0a020;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.dart-input__edit-banner button {
+  background: transparent;
+  border: 1px solid #e0a020;
+  border-radius: 6px;
+  color: #e0a020;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
 .dart-column {
   position: relative;
   display: flex;

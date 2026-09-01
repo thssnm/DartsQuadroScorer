@@ -69,7 +69,15 @@ function App() {
   }
 
   const lastThrowerIdx: 0 | 1 = state.activePlayer === 0 ? 1 : 0;
-  const canUndo = state.players[lastThrowerIdx].turns.length > 0;
+  const canUndo = state.players[lastThrowerIdx].turns.length > 0 && !state.editingTurn;
+
+  // Beim Bearbeiten einer bereits bestätigten Aufnahme muss die Live-
+  // Vorschau (Double-Finish-Erkennung) auf dem Punktestand VOR dieser
+  // Aufnahme rechnen, nicht auf dem aktuellen Gesamtrest des Spielers.
+  const remainingForInput = state.editingTurn
+    ? state.players[state.editingTurn.playerIndex].turns[state.editingTurn.turnIndex]?.scoreBefore ??
+      state.players[state.activePlayer].remaining
+    : state.players[state.activePlayer].remaining;
 
   const legWinnerForOverlay =
     state.phase === "leg-finished"
@@ -105,15 +113,17 @@ function App() {
       />
       <DartInput
         slots={state.currentSlots}
-        remaining={state.players[state.activePlayer].remaining}
+        remaining={remainingForInput}
         onSetSegment={(index, segment) => dispatch({ type: "SET_SLOT_SEGMENT", index, segment })}
         onSetMultiplier={(index, multiplier) =>
           dispatch({ type: "SET_SLOT_MULTIPLIER", index, multiplier })
         }
         onClearSlot={(index) => dispatch({ type: "CLEAR_SLOT", index })}
-        onConfirmTurn={() => dispatch({ type: "CONFIRM_TURN" })}
+        onConfirmTurn={() => dispatch({ type: state.editingTurn ? "CONFIRM_EDIT" : "CONFIRM_TURN" })}
         onUndo={() => dispatch({ type: "UNDO_LAST_TURN" })}
         canUndo={canUndo}
+        isEditing={!!state.editingTurn}
+        onCancelEdit={() => dispatch({ type: "CANCEL_EDIT" })}
       />
 
       {legWinnerForOverlay && (
@@ -138,6 +148,16 @@ function App() {
               {state.players[1].name}
             </p>
             <p className="leg-overlay__hint">Statistik wird geladen …</p>
+          </div>
+        </div>
+      )}
+
+      {state.editError && (
+        <div className="leg-overlay">
+          <div className="leg-overlay__card">
+            <h1>Ungültiger Wert</h1>
+            <p>{state.editError}</p>
+            <button onClick={() => dispatch({ type: "DISMISS_EDIT_ERROR" })}>Verstanden</button>
           </div>
         </div>
       )}
