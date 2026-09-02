@@ -5,6 +5,7 @@ import { computePlayerStats } from "../game/stats";
 interface MatchStatsProps {
   state: GameState;
   onNewMatch: () => void;
+  gistStatus?: string | null;
 }
 
 const dartsInTurns = (turns: PlayerState["turns"]) => turns.reduce((sum, t) => sum + t.darts.length, 0);
@@ -15,7 +16,7 @@ const legAverage = (turns: PlayerState["turns"]): number => {
   return darts > 0 ? (scoreInTurns(turns) / darts) * 3 : 0;
 };
 
-export const MatchStats = ({ state, onNewMatch }: MatchStatsProps) => {
+export const MatchStats = ({ state, onNewMatch, gistStatus }: MatchStatsProps) => {
   const [p0, p1] = state.players;
   const winner = p0.legsWon > p1.legsWon ? p0 : p1;
   const stats0 = computePlayerStats(p0);
@@ -29,6 +30,7 @@ export const MatchStats = ({ state, onNewMatch }: MatchStatsProps) => {
       <p className="match-stats__score">
         {p0.name} {p0.legsWon} : {p1.legsWon} {p1.name}
       </p>
+      {gistStatus && <p className="match-stats__gist-status">{gistStatus}</p>}
 
       <div className="match-stats__summary">
         <PlayerSummary name={p0.name} stats={stats0} />

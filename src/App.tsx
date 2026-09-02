@@ -1,10 +1,19 @@
-import { useEffect, useReducer, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { createInitialState, gameReducer } from "./game/gameReducer";
-import { loadGameState, saveGameState, clearGameState, isResumableState } from "./game/persistence";
+import {
+  loadGameState,
+  saveGameState,
+  clearGameState,
+  isResumableState,
+  getDeviceId,
+  resetDeviceId,
+} from "./game/persistence";
 import { SetupScreen } from "./components/SetupScreen";
 import { Scoreboard } from "./components/Scoreboard";
 import { DartInput } from "./components/DartInput";
 import { MatchStats } from "./components/MatchStats";
+import { isGistConfigComplete, loadGistConfig, saveGistConfig, type GistConfig } from "./gist/config";
+import { defaultBoardName, mapGameStateToBoardFile, uploadFinishedMatchToGist } from "./gist/api";
 import "./App.css";
 
 const MATCH_OVERLAY_DURATION_MS = 2500;
@@ -16,6 +25,10 @@ function App() {
     return createInitialState("Heim", "Gast", 2);
   });
   const [showMatchStats, setShowMatchStats] = useState(false);
+  const [deviceId, setDeviceId] = useState(() => getDeviceId());
+  const [gistConfig, setGistConfig] = useState<GistConfig>(() => loadGistConfig());
+  const [gistStatus, setGistStatus] = useState<string | null>(null);
+  const previousPhase = useRef(state.phase);
   const matchFinished = state.phase === "match-finished";
 
   // Läuft ein Spiel (nicht mehr im Setup), wird jede Änderung sofort
@@ -30,6 +43,10 @@ function App() {
     }
   }, [state]);
 
+  useEffect(() => {
+    saveGistConfig(gistConfig);
+  }, [gistConfig]);
+
   // Nach Spielende kurz das Sieg-Overlay zeigen, dann automatisch zur
   // Statistik-Seite weiterleiten.
   useEffect(() => {
@@ -39,11 +56,37 @@ function App() {
     }
   }, [matchFinished]);
 
+  useEffect(() => {
+    const changedToMatchFinished = previousPhase.current !== "match-finished" && matchFinished;
+    previousPhase.current = state.phase;
+
+    if (!changedToMatchFinished) return;
+
+    if (!isGistConfigComplete(gistConfig)) {
+      void Promise.resolve().then(() => setGistStatus("Gist-Sync nicht konfiguriert."));
+      return;
+    }
+
+    const board = mapGameStateToBoardFile(state, defaultBoardName(deviceId));
+    void uploadFinishedMatchToGist(gistConfig, deviceId, board)
+      .then(() => setGistStatus("Ergebnis in Gist hochgeladen."))
+      .catch(() => setGistStatus("Gist-Upload fehlgeschlagen."));
+  }, [deviceId, gistConfig, matchFinished, state]);
+
   if (state.phase === "setup") {
     return (
       <SetupScreen
+        deviceId={deviceId}
+        gistConfig={gistConfig}
+        onGistConfigChange={setGistConfig}
+        onResetDeviceId={() => {
+          if (window.confirm("Geräte-ID wirklich zurücksetzen?")) {
+            setDeviceId(resetDeviceId());
+          }
+        }}
         onStart={(nameA, nameB, legsToWin, startingPlayer) => {
           setShowMatchStats(false);
+          setGistStatus(null);
           dispatch({ type: "RESET_MATCH", nameA, nameB, legsToWin });
           if (startingPlayer === 1) dispatch({ type: "SWITCH_STARTING_PLAYER" });
           dispatch({ type: "START_MATCH" });
@@ -56,6 +99,7 @@ function App() {
     return (
       <MatchStats
         state={state}
+        gistStatus={gistStatus}
         onNewMatch={() => {
           setShowMatchStats(false);
           dispatch({
@@ -149,9 +193,12 @@ function App() {
               {state.players[1].name}
             </p>
             <p className="leg-overlay__hint">Statistik wird geladen …</p>
+            {gistStatus && <p className="gist-status">{gistStatus}</p>}
           </div>
         </div>
       )}
+
+      {gistStatus && !matchWinnerForOverlay && <div className="gist-toast">{gistStatus}</div>}
 
       {state.editError && (
         <div className="leg-overlay">
