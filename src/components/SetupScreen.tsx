@@ -1,7 +1,13 @@
 import { useState } from "react";
+import type { GistConfig } from "../gist/config";
+import { boardFileName } from "../gist/api";
 
 interface SetupScreenProps {
   onStart: (nameA: string, nameB: string, legsToWin: number, startingPlayer: 0 | 1) => void;
+  deviceId: string;
+  gistConfig: GistConfig;
+  onGistConfigChange: (config: GistConfig) => void;
+  onResetDeviceId: () => void;
 }
 
 const LEG_OPTIONS = [
@@ -11,7 +17,13 @@ const LEG_OPTIONS = [
   { label: "Best of 7", legsToWin: 4 },
 ];
 
-export const SetupScreen = ({ onStart }: SetupScreenProps) => {
+export const SetupScreen = ({
+  onStart,
+  deviceId,
+  gistConfig,
+  onGistConfigChange,
+  onResetDeviceId,
+}: SetupScreenProps) => {
   const [nameA, setNameA] = useState("Heim");
   const [nameB, setNameB] = useState("Gast");
   const [legsToWin, setLegsToWin] = useState(2);
@@ -55,6 +67,36 @@ export const SetupScreen = ({ onStart }: SetupScreenProps) => {
           {startingPlayer === 0 ? nameA || "Spieler 1" : nameB || "Spieler 2"} beginnt ⇄
         </button>
       </div>
+
+      <details className="setup-settings">
+        <summary>Gist-Sync</summary>
+
+        <div className="setup-row">
+          <label>GitHub Token</label>
+          <input
+            value={gistConfig.token}
+            onChange={(e) => onGistConfigChange({ ...gistConfig, token: e.target.value })}
+            type="password"
+            autoComplete="off"
+          />
+        </div>
+
+        <div className="setup-row">
+          <label>Gist-ID</label>
+          <input
+            value={gistConfig.gistId}
+            onChange={(e) => onGistConfigChange({ ...gistConfig, gistId: e.target.value })}
+            autoComplete="off"
+          />
+        </div>
+
+        <div className="setup-device">
+          <span>{boardFileName(deviceId)}</span>
+          <button type="button" onClick={onResetDeviceId}>
+            Geräte-ID zurücksetzen
+          </button>
+        </div>
+      </details>
 
       <button
         className="start-btn"

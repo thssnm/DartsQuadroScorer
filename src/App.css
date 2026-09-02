@@ -128,6 +128,46 @@ body {
   margin-top: 12px;
 }
 
+.setup-settings {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.setup-settings summary {
+  color: var(--text-dim);
+  cursor: pointer;
+  font-weight: bold;
+  margin-bottom: 16px;
+}
+
+.setup-device {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+}
+
+.setup-device span {
+  overflow-wrap: anywhere;
+}
+
+.setup-device button {
+  flex: 0 0 auto;
+  padding: 8px 10px;
+  background: var(--bg-box);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.setup-device button:hover {
+  color: var(--text);
+}
+
 /* ---------- Scoreboard ---------- */
 .scoreboard__header {
   display: grid;
@@ -549,6 +589,25 @@ body {
   font-style: italic;
 }
 
+.gist-status,
+.gist-toast,
+.match-stats__gist-status {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.gist-toast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 60;
+  max-width: min(320px, calc(100vw - 32px));
+  padding: 10px 12px;
+  background: rgba(14, 14, 16, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
 /* ---------- Match Stats Seite ---------- */
 .match-stats {
   max-width: 900px;
@@ -565,6 +624,11 @@ body {
   text-align: center;
   color: var(--text-dim);
   margin-bottom: 24px;
+}
+
+.match-stats__gist-status {
+  margin: -12px 0 24px;
+  text-align: center;
 }
 
 .match-stats__summary {
