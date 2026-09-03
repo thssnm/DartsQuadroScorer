@@ -3,9 +3,9 @@ export interface GistConfig {
   gistId: string;
 }
 
-export const loadGistConfig = (): GistConfig => ({
+export const loadGistConfig = (gistId: string): GistConfig => ({
   token: import.meta.env.VITE_GITHUB_TOKEN ?? "",
-  gistId: import.meta.env.VITE_GITHUB_GIST_ID ?? "",
+  gistId,
 });
 
 export const isGistConfigComplete = (config: GistConfig): boolean =>

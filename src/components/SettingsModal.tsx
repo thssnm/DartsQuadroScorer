@@ -2,11 +2,23 @@ import { useEffect } from "react";
 
 interface SettingsModalProps {
   boardId: string;
+  gistId: string;
+  resultUploadEnabled: boolean;
   onBoardIdChange: (boardId: string) => void;
+  onGistIdChange: (gistId: string) => void;
+  onResultUploadEnabledChange: (enabled: boolean) => void;
   onClose: () => void;
 }
 
-export const SettingsModal = ({ boardId, onBoardIdChange, onClose }: SettingsModalProps) => {
+export const SettingsModal = ({
+  boardId,
+  gistId,
+  resultUploadEnabled,
+  onBoardIdChange,
+  onGistIdChange,
+  onResultUploadEnabledChange,
+  onClose,
+}: SettingsModalProps) => {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
@@ -38,6 +50,23 @@ export const SettingsModal = ({ boardId, onBoardIdChange, onClose }: SettingsMod
             placeholder="Board-Name eingeben"
             autoFocus
           />
+        </label>
+        <label className="settings-modal__field">
+          <span>Gist-ID</span>
+          <input
+            value={gistId}
+            onChange={(event) => onGistIdChange(event.target.value)}
+            placeholder="Gist-ID eingeben"
+            autoComplete="off"
+          />
+        </label>
+        <label className="settings-modal__toggle">
+          <input
+            type="checkbox"
+            checked={resultUploadEnabled}
+            onChange={(event) => onResultUploadEnabledChange(event.target.checked)}
+          />
+          <span>Ergebnis-Upload aktivieren</span>
         </label>
       </div>
     </div>

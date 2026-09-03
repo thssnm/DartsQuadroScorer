@@ -569,6 +569,11 @@ body {
   font-size: 0.9rem;
 }
 
+.settings-modal__field + .settings-modal__field,
+.settings-modal__field + .settings-modal__toggle {
+  margin-top: 16px;
+}
+
 .settings-modal__field input {
   width: 100%;
   padding: 12px;
@@ -577,6 +582,20 @@ body {
   border-radius: 8px;
   color: var(--text);
   font-size: 1.1rem;
+}
+
+.settings-modal__toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.settings-modal__toggle input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--red-bright);
 }
 
 /* ---------- Leg / Match finished ---------- */

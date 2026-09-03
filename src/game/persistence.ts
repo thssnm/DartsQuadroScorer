@@ -3,6 +3,8 @@ import type { GameState } from "./types";
 const STORAGE_KEY = "darts-quadro-scorer:game-state";
 const DEVICE_ID_KEY = "darts-quadro-scorer:device-id";
 const BOARD_ID_KEY = "darts-quadro-scorer:board-id";
+const GIST_ID_KEY = "darts-quadro-scorer:gist-id";
+const RESULT_UPLOAD_ENABLED_KEY = "darts-quadro-scorer:result-upload-enabled";
 
 export const DEFAULT_BOARD_ID = "Board 1";
 
@@ -76,6 +78,38 @@ export const loadBoardId = (): string => {
 export const saveBoardId = (boardId: string): void => {
   try {
     window.localStorage.setItem(BOARD_ID_KEY, boardId.trim());
+  } catch {
+    // siehe oben
+  }
+};
+
+export const loadGistId = (): string => {
+  try {
+    return window.localStorage.getItem(GIST_ID_KEY)?.trim() ?? "";
+  } catch {
+    return "";
+  }
+};
+
+export const saveGistId = (gistId: string): void => {
+  try {
+    window.localStorage.setItem(GIST_ID_KEY, gistId.trim());
+  } catch {
+    // siehe oben
+  }
+};
+
+export const loadResultUploadEnabled = (): boolean => {
+  try {
+    return window.localStorage.getItem(RESULT_UPLOAD_ENABLED_KEY) === "true";
+  } catch {
+    return false;
+  }
+};
+
+export const saveResultUploadEnabled = (enabled: boolean): void => {
+  try {
+    window.localStorage.setItem(RESULT_UPLOAD_ENABLED_KEY, enabled ? "true" : "false");
   } catch {
     // siehe oben
   }
