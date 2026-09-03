@@ -99,6 +99,22 @@ body {
   font-size: 1.1rem;
 }
 
+.setup-player-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.setup-player-field select {
+  min-width: 150px;
+  padding: 0 10px;
+  background: var(--bg-box);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
 .leg-options {
   display: flex;
   gap: 8px;
@@ -570,7 +586,8 @@ body {
 }
 
 .settings-modal__field + .settings-modal__field,
-.settings-modal__field + .settings-modal__toggle {
+.settings-modal__field + .settings-modal__toggle,
+.settings-modal__status + .settings-modal__toggle {
   margin-top: 16px;
 }
 
@@ -582,6 +599,29 @@ body {
   border-radius: 8px;
   color: var(--text);
   font-size: 1.1rem;
+}
+
+.settings-modal__test {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--bg-box);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.settings-modal__test:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.settings-modal__status {
+  margin: 8px 0 0;
+  color: var(--text-dim);
+  font-size: 0.85rem;
 }
 
 .settings-modal__toggle {

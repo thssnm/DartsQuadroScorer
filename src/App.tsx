@@ -19,6 +19,7 @@ import { MatchStats } from "./components/MatchStats";
 import { SettingsModal } from "./components/SettingsModal";
 import { UploadErrorPopup } from "./components/UploadErrorPopup";
 import { loadGistConfig } from "./gist/config";
+import { testGistConnection } from "./gist/api";
 import { uploadMatchResult } from "./gist/matchUpload";
 import "./App.css";
 
@@ -113,6 +114,11 @@ function App() {
       onBoardIdChange={updateBoardId}
       onGistIdChange={updateGistId}
       onResultUploadEnabledChange={updateResultUploadEnabled}
+      onTestConnection={() =>
+        testGistConnection(loadGistConfig(gistId)).then((result) =>
+          result.ok ? `✓ ${result.message}` : `Verbindung fehlgeschlagen: ${result.message}`
+        )
+      }
       onClose={() => setSettingsOpen(false)}
     />
   ) : null;
@@ -126,6 +132,8 @@ function App() {
       <>
         <div className="app__floating-settings">{settingsButton}</div>
         <SetupScreen
+          resultUploadEnabled={resultUploadEnabled}
+          gistConfig={loadGistConfig(gistId)}
           onStart={(nameA, nameB, legsToWin, startingPlayer) => {
             setShowMatchStats(false);
             setGistStatus(null);

@@ -1,7 +1,11 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { GistConfig } from "../gist/config";
+import { loadSetupPlayerNames } from "../gist/playerNames";
 
 interface SetupScreenProps {
   onStart: (nameA: string, nameB: string, legsToWin: number, startingPlayer: 0 | 1) => void;
+  resultUploadEnabled: boolean;
+  gistConfig: GistConfig;
 }
 
 const LEG_OPTIONS = [
@@ -11,27 +15,60 @@ const LEG_OPTIONS = [
   { label: "Best of 7", legsToWin: 4 },
 ];
 
-export const SetupScreen = ({
-  onStart,
-}: SetupScreenProps) => {
+interface PlayerNameFieldProps {
+  label: string;
+  value: string;
+  playerNames: string[];
+  onChange: (value: string) => void;
+}
+
+export const PlayerNameField = ({ label, value, playerNames, onChange }: PlayerNameFieldProps) => (
+  <div className="setup-row">
+    <label>{label}</label>
+    <div className="setup-player-field">
+      <input value={value} onChange={(e) => onChange(e.target.value)} maxLength={16} />
+      {playerNames.length > 0 && (
+        <select value="" onChange={(e) => onChange(e.target.value)} aria-label={`${label} auswählen`}>
+          <option value="" disabled>
+            Spieler wählen
+          </option>
+          {playerNames.map((name) => (
+            <option key={name} value={name}>
+              {name}
+            </option>
+          ))}
+        </select>
+      )}
+    </div>
+  </div>
+);
+
+export const SetupScreen = ({ onStart, resultUploadEnabled, gistConfig }: SetupScreenProps) => {
   const [nameA, setNameA] = useState("Heim");
   const [nameB, setNameB] = useState("Gast");
   const [legsToWin, setLegsToWin] = useState(2);
   const [startingPlayer, setStartingPlayer] = useState<0 | 1>(0);
+  const [playerNames, setPlayerNames] = useState<string[]>([]);
+  const initialPlayerLookup = useRef({ resultUploadEnabled, gistConfig });
+
+  useEffect(() => {
+    let ignore = false;
+    const lookup = initialPlayerLookup.current;
+    void loadSetupPlayerNames(lookup.resultUploadEnabled, lookup.gistConfig).then((players) => {
+      if (!ignore) setPlayerNames(players);
+    });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   return (
     <div className="setup-screen">
       <h1>Neues Spiel — 501 Double Out</h1>
 
-      <div className="setup-row">
-        <label>Spieler 1</label>
-        <input value={nameA} onChange={(e) => setNameA(e.target.value)} maxLength={16} />
-      </div>
-
-      <div className="setup-row">
-        <label>Spieler 2</label>
-        <input value={nameB} onChange={(e) => setNameB(e.target.value)} maxLength={16} />
-      </div>
+      <PlayerNameField label="Spieler 1" value={nameA} playerNames={playerNames} onChange={setNameA} />
+      <PlayerNameField label="Spieler 2" value={nameB} playerNames={playerNames} onChange={setNameB} />
 
       <div className="setup-row">
         <label>Legs</label>

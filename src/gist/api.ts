@@ -61,6 +61,14 @@ const authHeaders = (config: GistConfig): Record<string, string> => ({
   "X-GitHub-Api-Version": "2022-11-28",
 });
 
+const fetchGist = async (config: GistConfig): Promise<GistResponse> => {
+  const response = await fetch(`${GIST_API_URL}/${encodeURIComponent(config.gistId.trim())}`, {
+    headers: authHeaders(config),
+  });
+  await assertOk(response);
+  return (await response.json()) as GistResponse;
+};
+
 const assertOk = async (response: Response): Promise<void> => {
   if (response.ok) return;
   let message = `GitHub Gist request failed (${response.status})`;
@@ -73,18 +81,30 @@ const assertOk = async (response: Response): Promise<void> => {
   throw new Error(message);
 };
 
-const readPlayers = async (config: GistConfig): Promise<PlayersGistFile> => {
-  const response = await fetch(`${GIST_API_URL}/${encodeURIComponent(config.gistId.trim())}`, {
-    headers: authHeaders(config),
-  });
-  await assertOk(response);
-
-  const gist = (await response.json()) as GistResponse;
+export const readPlayersFromGist = async (config: GistConfig): Promise<PlayersGistFile> => {
+  const gist = await fetchGist(config);
   const content = gist.files?.[PLAYERS_FILE]?.content;
   if (!content) return { players: [] };
 
   const parsed = JSON.parse(content) as Partial<PlayersGistFile>;
   return { players: Array.isArray(parsed.players) ? parsed.players.filter(isPlayerName) : [] };
+};
+
+export interface GistConnectionResult {
+  ok: boolean;
+  message: string;
+}
+
+export const testGistConnection = async (config: GistConfig): Promise<GistConnectionResult> => {
+  try {
+    await fetchGist(config);
+    return { ok: true, message: "Verbindung erfolgreich" };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Verbindung fehlgeschlagen",
+    };
+  }
 };
 
 const isPlayerName = (value: unknown): value is string =>
@@ -103,7 +123,7 @@ export const uploadFinishedMatchToGist = async (
   boardId: string,
   board: BoardGistFile
 ): Promise<void> => {
-  const players = await readPlayers(config);
+  const players = await readPlayersFromGist(config);
   const mergedPlayers: PlayersGistFile = {
     players: mergePlayers(players.players, [board.home, board.guest]),
   };
