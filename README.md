@@ -11,11 +11,11 @@ Für den Gist-Upload lokal eine `.env` nach Vorlage von `.env.example` anlegen:
 
 ```bash
 VITE_GITHUB_TOKEN=
-VITE_GITHUB_GIST_ID=
 ```
 
-Die `.env` nicht committen. Beim Vercel-Deploy dieselben zwei Werte als
-Projekt-Umgebungsvariablen in den Vercel-Projekteinstellungen hinterlegen.
+Die `.env` nicht committen. Beim Vercel-Deploy denselben Wert als
+Projekt-Umgebungsvariable in den Vercel-Projekteinstellungen hinterlegen. Die
+Gist-ID wird in den App-Einstellungen am Board eingetragen.
 
 ```bash
 npm install

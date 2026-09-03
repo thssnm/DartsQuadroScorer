@@ -6,15 +6,20 @@ import {
   clearGameState,
   isResumableState,
   loadBoardId,
+  loadGistId,
+  loadResultUploadEnabled,
   saveBoardId,
+  saveGistId,
+  saveResultUploadEnabled,
 } from "./game/persistence";
 import { SetupScreen } from "./components/SetupScreen";
 import { Scoreboard } from "./components/Scoreboard";
 import { DartInput } from "./components/DartInput";
 import { MatchStats } from "./components/MatchStats";
 import { SettingsModal } from "./components/SettingsModal";
-import { isGistConfigComplete, loadGistConfig, type GistConfig } from "./gist/config";
-import { defaultBoardName, mapGameStateToBoardFile, uploadFinishedMatchToGist } from "./gist/api";
+import { UploadErrorPopup } from "./components/UploadErrorPopup";
+import { loadGistConfig } from "./gist/config";
+import { uploadMatchResult } from "./gist/matchUpload";
 import "./App.css";
 
 const MATCH_OVERLAY_DURATION_MS = 2500;
@@ -27,9 +32,11 @@ function App() {
   });
   const [showMatchStats, setShowMatchStats] = useState(false);
   const [boardId, setBoardId] = useState(() => loadBoardId());
+  const [gistId, setGistId] = useState(() => loadGistId());
+  const [resultUploadEnabled, setResultUploadEnabled] = useState(() => loadResultUploadEnabled());
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [gistConfig] = useState<GistConfig>(() => loadGistConfig());
   const [gistStatus, setGistStatus] = useState<string | null>(null);
+  const [uploadErrorVisible, setUploadErrorVisible] = useState(false);
   const previousPhase = useRef(state.phase);
   const matchFinished = state.phase === "match-finished";
 
@@ -60,20 +67,30 @@ function App() {
 
     if (!changedToMatchFinished) return;
 
-    if (!isGistConfigComplete(gistConfig)) {
-      return;
-    }
-
-    const effectiveBoardId = defaultBoardName(boardId);
-    const board = mapGameStateToBoardFile(state, effectiveBoardId);
-    void uploadFinishedMatchToGist(gistConfig, effectiveBoardId, board)
-      .then(() => setGistStatus("Ergebnis in Gist hochgeladen."))
-      .catch(() => setGistStatus("Gist-Upload fehlgeschlagen."));
-  }, [boardId, gistConfig, matchFinished, state]);
+    void uploadMatchResult({
+      enabled: resultUploadEnabled,
+      config: loadGistConfig(gistId),
+      boardId,
+      state,
+    }).then((result) => {
+      if (result === "uploaded") setGistStatus("Ergebnis in Gist hochgeladen.");
+      if (result === "failed") setUploadErrorVisible(true);
+    });
+  }, [boardId, gistId, matchFinished, resultUploadEnabled, state]);
 
   const updateBoardId = (nextBoardId: string) => {
     setBoardId(nextBoardId);
     saveBoardId(nextBoardId);
+  };
+
+  const updateGistId = (nextGistId: string) => {
+    setGistId(nextGistId);
+    saveGistId(nextGistId);
+  };
+
+  const updateResultUploadEnabled = (enabled: boolean) => {
+    setResultUploadEnabled(enabled);
+    saveResultUploadEnabled(enabled);
   };
 
   const settingsButton = (
@@ -89,7 +106,19 @@ function App() {
   );
 
   const settingsModal = settingsOpen ? (
-    <SettingsModal boardId={boardId} onBoardIdChange={updateBoardId} onClose={() => setSettingsOpen(false)} />
+    <SettingsModal
+      boardId={boardId}
+      gistId={gistId}
+      resultUploadEnabled={resultUploadEnabled}
+      onBoardIdChange={updateBoardId}
+      onGistIdChange={updateGistId}
+      onResultUploadEnabledChange={updateResultUploadEnabled}
+      onClose={() => setSettingsOpen(false)}
+    />
+  ) : null;
+
+  const uploadErrorPopup = uploadErrorVisible ? (
+    <UploadErrorPopup onConfirm={() => setUploadErrorVisible(false)} />
   ) : null;
 
   if (state.phase === "setup") {
@@ -100,12 +129,14 @@ function App() {
           onStart={(nameA, nameB, legsToWin, startingPlayer) => {
             setShowMatchStats(false);
             setGistStatus(null);
+            setUploadErrorVisible(false);
             dispatch({ type: "RESET_MATCH", nameA, nameB, legsToWin });
             if (startingPlayer === 1) dispatch({ type: "SWITCH_STARTING_PLAYER" });
             dispatch({ type: "START_MATCH" });
           }}
         />
         {settingsModal}
+        {uploadErrorPopup}
       </>
     );
   }
@@ -128,6 +159,7 @@ function App() {
           }}
         />
         {settingsModal}
+        {uploadErrorPopup}
       </>
     );
   }
@@ -230,6 +262,7 @@ function App() {
         </div>
       )}
       {settingsModal}
+      {uploadErrorPopup}
     </div>
   );
 }
