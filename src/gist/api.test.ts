@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createInitialState } from "../game/gameReducer";
-import { boardFileName, mapGameStateToBoardFile, uploadFinishedMatchToGist } from "./api";
+import {
+  boardFileName,
+  mapGameStateToBoardFile,
+  testGistConnection,
+  uploadFinishedMatchToGist,
+} from "./api";
 
 describe("mapGameStateToBoardFile", () => {
   it("maps a finished match to the dashboard board format", () => {
@@ -23,6 +28,34 @@ describe("mapGameStateToBoardFile", () => {
       highlights: [],
       updatedAt: "2026-09-02T10:15:00Z",
       acknowledged: false,
+    });
+  });
+});
+
+describe("testGistConnection", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("reports success after a readable Gist response", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ files: {} }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(testGistConnection({ token: "token", gistId: "gist-id" })).resolves.toEqual({
+      ok: true,
+      message: "Verbindung erfolgreich",
+    });
+  });
+
+  it("reports the GitHub error message after a failed Gist response", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify({ message: "Bad credentials" }), { status: 401 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(testGistConnection({ token: "token", gistId: "gist-id" })).resolves.toEqual({
+      ok: false,
+      message: "Bad credentials",
     });
   });
 });

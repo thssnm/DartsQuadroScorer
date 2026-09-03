@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface SettingsModalProps {
   boardId: string;
   gistId: string;
   resultUploadEnabled: boolean;
+  onTestConnection: () => Promise<string>;
   onBoardIdChange: (boardId: string) => void;
   onGistIdChange: (gistId: string) => void;
   onResultUploadEnabledChange: (enabled: boolean) => void;
@@ -14,11 +15,15 @@ export const SettingsModal = ({
   boardId,
   gistId,
   resultUploadEnabled,
+  onTestConnection,
   onBoardIdChange,
   onGistIdChange,
   onResultUploadEnabledChange,
   onClose,
 }: SettingsModalProps) => {
+  const [connectionStatus, setConnectionStatus] = useState<string | null>(null);
+  const [testingConnection, setTestingConnection] = useState(false);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
@@ -26,6 +31,17 @@ export const SettingsModal = ({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
+
+  const handleTestConnection = () => {
+    setTestingConnection(true);
+    setConnectionStatus(null);
+    void onTestConnection()
+      .then(setConnectionStatus)
+      .catch((error: unknown) =>
+        setConnectionStatus(error instanceof Error ? error.message : "Verbindung fehlgeschlagen")
+      )
+      .finally(() => setTestingConnection(false));
+  };
 
   return (
     <div className="settings-modal" onMouseDown={onClose} role="presentation">
@@ -60,6 +76,15 @@ export const SettingsModal = ({
             autoComplete="off"
           />
         </label>
+        <button
+          type="button"
+          className="settings-modal__test"
+          onClick={handleTestConnection}
+          disabled={testingConnection}
+        >
+          {testingConnection ? "Verbindung wird getestet …" : "Verbindung testen"}
+        </button>
+        {connectionStatus && <p className="settings-modal__status">{connectionStatus}</p>}
         <label className="settings-modal__toggle">
           <input
             type="checkbox"
