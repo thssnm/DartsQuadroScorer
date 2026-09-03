@@ -61,7 +61,7 @@ describe("uploadFinishedMatchToGist", () => {
       acknowledged: false as const,
     };
 
-    await uploadFinishedMatchToGist({ token: " token ", gistId: " gist-id " }, "device-1", board);
+    await uploadFinishedMatchToGist({ token: " token ", gistId: " gist-id " }, "Board 1", board);
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock).toHaveBeenNthCalledWith(1, "https://api.github.com/gists/gist-id", {
@@ -81,7 +81,7 @@ describe("uploadFinishedMatchToGist", () => {
     const body = JSON.parse(patchRequest[1].body as string) as {
       files: Record<string, { content: string }>;
     };
-    expect(JSON.parse(body.files[boardFileName("device-1", "match-uuid-1")].content)).toEqual(board);
+    expect(JSON.parse(body.files[boardFileName("Board 1", "match-uuid-1")].content)).toEqual(board);
     expect(JSON.parse(body.files["players.json"].content)).toEqual({
       players: ["Charlie", "Alice", "Bob"],
     });
@@ -111,8 +111,8 @@ describe("uploadFinishedMatchToGist", () => {
       acknowledged: false as const,
     };
 
-    await uploadFinishedMatchToGist({ token: "token", gistId: "gist-id" }, "device-1", board);
-    await uploadFinishedMatchToGist({ token: "token", gistId: "gist-id" }, "device-1", board);
+    await uploadFinishedMatchToGist({ token: "token", gistId: "gist-id" }, "Board 1", board);
+    await uploadFinishedMatchToGist({ token: "token", gistId: "gist-id" }, "Board 1", board);
 
     const firstPatch = JSON.parse(fetchMock.mock.calls[1][1].body as string) as {
       files: Record<string, { content: string }>;
@@ -121,7 +121,38 @@ describe("uploadFinishedMatchToGist", () => {
       files: Record<string, { content: string }>;
     };
 
-    expect(firstPatch.files).toHaveProperty(boardFileName("device-1", "match-uuid-1"));
-    expect(secondPatch.files).toHaveProperty(boardFileName("device-1", "match-uuid-2"));
+    expect(firstPatch.files).toHaveProperty(boardFileName("Board 1", "match-uuid-1"));
+    expect(secondPatch.files).toHaveProperty(boardFileName("Board 1", "match-uuid-2"));
+  });
+
+  it("uses the configured board id instead of the old device id in the board filename", async () => {
+    vi.stubGlobal("crypto", { randomUUID: () => "match-uuid-1" });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ files: {} }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({}), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const board = {
+      boardName: "Board 7",
+      home: "Alice",
+      guest: "Bob",
+      legsHome: 2,
+      legsGuest: 0,
+      status: "finished" as const,
+      highlights: [],
+      updatedAt: "2026-09-02T10:15:00Z",
+      acknowledged: false as const,
+    };
+
+    await uploadFinishedMatchToGist({ token: "token", gistId: "gist-id" }, "Board 7", board);
+
+    const patchRequest = fetchMock.mock.calls[1];
+    const body = JSON.parse(patchRequest[1].body as string) as {
+      files: Record<string, { content: string }>;
+    };
+
+    expect(body.files).toHaveProperty("board-Board-7-match-uuid-1.json");
+    expect(body.files).not.toHaveProperty("board-device-1-match-uuid-1.json");
   });
 });

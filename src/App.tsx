@@ -5,14 +5,15 @@ import {
   saveGameState,
   clearGameState,
   isResumableState,
-  getDeviceId,
-  resetDeviceId,
+  loadBoardId,
+  saveBoardId,
 } from "./game/persistence";
 import { SetupScreen } from "./components/SetupScreen";
 import { Scoreboard } from "./components/Scoreboard";
 import { DartInput } from "./components/DartInput";
 import { MatchStats } from "./components/MatchStats";
-import { isGistConfigComplete, loadGistConfig, saveGistConfig, type GistConfig } from "./gist/config";
+import { SettingsModal } from "./components/SettingsModal";
+import { isGistConfigComplete, loadGistConfig, type GistConfig } from "./gist/config";
 import { defaultBoardName, mapGameStateToBoardFile, uploadFinishedMatchToGist } from "./gist/api";
 import "./App.css";
 
@@ -25,8 +26,9 @@ function App() {
     return createInitialState("Heim", "Gast", 2);
   });
   const [showMatchStats, setShowMatchStats] = useState(false);
-  const [deviceId, setDeviceId] = useState(() => getDeviceId());
-  const [gistConfig, setGistConfig] = useState<GistConfig>(() => loadGistConfig());
+  const [boardId, setBoardId] = useState(() => loadBoardId());
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [gistConfig] = useState<GistConfig>(() => loadGistConfig());
   const [gistStatus, setGistStatus] = useState<string | null>(null);
   const previousPhase = useRef(state.phase);
   const matchFinished = state.phase === "match-finished";
@@ -42,10 +44,6 @@ function App() {
       saveGameState(state);
     }
   }, [state]);
-
-  useEffect(() => {
-    saveGistConfig(gistConfig);
-  }, [gistConfig]);
 
   // Nach Spielende kurz das Sieg-Overlay zeigen, dann automatisch zur
   // Statistik-Seite weiterleiten.
@@ -63,53 +61,74 @@ function App() {
     if (!changedToMatchFinished) return;
 
     if (!isGistConfigComplete(gistConfig)) {
-      void Promise.resolve().then(() => setGistStatus("Gist-Sync nicht konfiguriert."));
       return;
     }
 
-    const board = mapGameStateToBoardFile(state, defaultBoardName(deviceId));
-    void uploadFinishedMatchToGist(gistConfig, deviceId, board)
+    const effectiveBoardId = defaultBoardName(boardId);
+    const board = mapGameStateToBoardFile(state, effectiveBoardId);
+    void uploadFinishedMatchToGist(gistConfig, effectiveBoardId, board)
       .then(() => setGistStatus("Ergebnis in Gist hochgeladen."))
       .catch(() => setGistStatus("Gist-Upload fehlgeschlagen."));
-  }, [deviceId, gistConfig, matchFinished, state]);
+  }, [boardId, gistConfig, matchFinished, state]);
+
+  const updateBoardId = (nextBoardId: string) => {
+    setBoardId(nextBoardId);
+    saveBoardId(nextBoardId);
+  };
+
+  const settingsButton = (
+    <button
+      type="button"
+      className="settings-btn"
+      onClick={() => setSettingsOpen(true)}
+      aria-label="Einstellungen öffnen"
+      title="Einstellungen"
+    >
+      ⚙
+    </button>
+  );
+
+  const settingsModal = settingsOpen ? (
+    <SettingsModal boardId={boardId} onBoardIdChange={updateBoardId} onClose={() => setSettingsOpen(false)} />
+  ) : null;
 
   if (state.phase === "setup") {
     return (
-      <SetupScreen
-        deviceId={deviceId}
-        gistConfig={gistConfig}
-        onGistConfigChange={setGistConfig}
-        onResetDeviceId={() => {
-          if (window.confirm("Geräte-ID wirklich zurücksetzen?")) {
-            setDeviceId(resetDeviceId());
-          }
-        }}
-        onStart={(nameA, nameB, legsToWin, startingPlayer) => {
-          setShowMatchStats(false);
-          setGistStatus(null);
-          dispatch({ type: "RESET_MATCH", nameA, nameB, legsToWin });
-          if (startingPlayer === 1) dispatch({ type: "SWITCH_STARTING_PLAYER" });
-          dispatch({ type: "START_MATCH" });
-        }}
-      />
+      <>
+        <div className="app__floating-settings">{settingsButton}</div>
+        <SetupScreen
+          onStart={(nameA, nameB, legsToWin, startingPlayer) => {
+            setShowMatchStats(false);
+            setGistStatus(null);
+            dispatch({ type: "RESET_MATCH", nameA, nameB, legsToWin });
+            if (startingPlayer === 1) dispatch({ type: "SWITCH_STARTING_PLAYER" });
+            dispatch({ type: "START_MATCH" });
+          }}
+        />
+        {settingsModal}
+      </>
     );
   }
 
   if (matchFinished && showMatchStats) {
     return (
-      <MatchStats
-        state={state}
-        gistStatus={gistStatus}
-        onNewMatch={() => {
-          setShowMatchStats(false);
-          dispatch({
-            type: "RESET_MATCH",
-            nameA: state.players[0].name,
-            nameB: state.players[1].name,
-            legsToWin: state.legsToWin,
-          });
-        }}
-      />
+      <>
+        <div className="app__floating-settings">{settingsButton}</div>
+        <MatchStats
+          state={state}
+          gistStatus={gistStatus}
+          onNewMatch={() => {
+            setShowMatchStats(false);
+            dispatch({
+              type: "RESET_MATCH",
+              nameA: state.players[0].name,
+              nameB: state.players[1].name,
+              legsToWin: state.legsToWin,
+            });
+          }}
+        />
+        {settingsModal}
+      </>
     );
   }
 
@@ -141,6 +160,7 @@ function App() {
   return (
     <div className="app">
       <div className="app__topbar">
+        {settingsButton}
         <button
           className="abort-btn"
           onClick={() => {
@@ -209,6 +229,7 @@ function App() {
           </div>
         </div>
       )}
+      {settingsModal}
     </div>
   );
 }

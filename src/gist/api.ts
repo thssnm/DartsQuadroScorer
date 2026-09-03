@@ -32,12 +32,12 @@ const fallbackMatchFileId = (): string => {
 
 export const createMatchFileId = (): string => globalThis.crypto?.randomUUID?.() ?? fallbackMatchFileId();
 
-export const boardFileName = (deviceId: string, matchFileId: string): string =>
-  `board-${deviceId}-${matchFileId}.json`;
+const fileNamePart = (value: string): string => value.trim().replace(/[^a-z0-9_-]+/gi, "-") || "board";
 
-export const boardFileNamePreview = (deviceId: string): string => boardFileName(deviceId, "<match-id>");
+export const boardFileName = (boardId: string, matchFileId: string): string =>
+  `board-${fileNamePart(boardId)}-${matchFileId}.json`;
 
-export const defaultBoardName = (deviceId: string): string => `Board ${deviceId.slice(0, 8)}`;
+export const defaultBoardName = (boardId: string): string => boardId.trim() || "Board 1";
 
 export const mapGameStateToBoardFile = (
   state: GameState,
@@ -100,7 +100,7 @@ const mergePlayers = (existing: string[], additions: string[]): string[] => {
 
 export const uploadFinishedMatchToGist = async (
   config: GistConfig,
-  deviceId: string,
+  boardId: string,
   board: BoardGistFile
 ): Promise<void> => {
   const players = await readPlayers(config);
@@ -116,7 +116,7 @@ export const uploadFinishedMatchToGist = async (
     },
     body: JSON.stringify({
       files: {
-        [boardFileName(deviceId, createMatchFileId())]: { content: JSON.stringify(board, null, 2) },
+        [boardFileName(boardId, createMatchFileId())]: { content: JSON.stringify(board, null, 2) },
         [PLAYERS_FILE]: { content: JSON.stringify(mergedPlayers, null, 2) },
       },
     }),

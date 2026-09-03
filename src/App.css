@@ -28,12 +28,21 @@ body {
 
 .app__topbar {
   display: flex;
+  gap: 8px;
   justify-content: flex-end;
   padding: 6px 24px;
   background: var(--bg-dark);
 }
 
-.abort-btn {
+.app__floating-settings {
+  position: fixed;
+  top: 8px;
+  right: 8px;
+  z-index: 20;
+}
+
+.abort-btn,
+.settings-btn {
   padding: 6px 14px;
   background: transparent;
   border: 1px solid var(--border);
@@ -43,7 +52,14 @@ body {
   cursor: pointer;
 }
 
-.abort-btn:hover {
+.settings-btn {
+  min-width: 36px;
+  padding: 6px 10px;
+  font-size: 1rem;
+}
+
+.abort-btn:hover,
+.settings-btn:hover {
   border-color: var(--red-bright);
   color: var(--text);
 }
@@ -126,46 +142,6 @@ body {
   font-weight: bold;
   cursor: pointer;
   margin-top: 12px;
-}
-
-.setup-settings {
-  margin-top: 24px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
-}
-
-.setup-settings summary {
-  color: var(--text-dim);
-  cursor: pointer;
-  font-weight: bold;
-  margin-bottom: 16px;
-}
-
-.setup-device {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  color: var(--text-dim);
-  font-size: 0.8rem;
-}
-
-.setup-device span {
-  overflow-wrap: anywhere;
-}
-
-.setup-device button {
-  flex: 0 0 auto;
-  padding: 8px 10px;
-  background: var(--bg-box);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text-dim);
-  cursor: pointer;
-}
-
-.setup-device button:hover {
-  color: var(--text);
 }
 
 /* ---------- Scoreboard ---------- */
@@ -538,6 +514,69 @@ body {
   font-size: 1.4rem;
   font-weight: bold;
   cursor: pointer;
+}
+
+/* ---------- Settings ---------- */
+.settings-modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(10, 10, 12, 0.55);
+  backdrop-filter: blur(2px);
+  z-index: 80;
+}
+
+.settings-modal__panel {
+  width: min(420px, 100%);
+  background: rgba(38, 38, 43, 0.96);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.settings-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.settings-modal__header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.settings-modal__close {
+  width: 34px;
+  height: 34px;
+  background: var(--bg-box);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.settings-modal__field span {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-dim);
+  font-size: 0.9rem;
+}
+
+.settings-modal__field input {
+  width: 100%;
+  padding: 12px;
+  background: var(--bg-box);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 1.1rem;
 }
 
 /* ---------- Leg / Match finished ---------- */
