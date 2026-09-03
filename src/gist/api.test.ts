@@ -32,7 +32,8 @@ describe("uploadFinishedMatchToGist", () => {
     vi.unstubAllGlobals();
   });
 
-  it("reads players.json and patches the board file plus merged players", async () => {
+  it("reads players.json and patches a per-match board file plus merged players", async () => {
+    vi.stubGlobal("crypto", { randomUUID: () => "match-uuid-1" });
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
@@ -80,9 +81,47 @@ describe("uploadFinishedMatchToGist", () => {
     const body = JSON.parse(patchRequest[1].body as string) as {
       files: Record<string, { content: string }>;
     };
-    expect(JSON.parse(body.files[boardFileName("device-1")].content)).toEqual(board);
+    expect(JSON.parse(body.files[boardFileName("device-1", "match-uuid-1")].content)).toEqual(board);
     expect(JSON.parse(body.files["players.json"].content)).toEqual({
       players: ["Charlie", "Alice", "Bob"],
     });
+  });
+
+  it("uses a fresh board filename for each match upload", async () => {
+    let uuidIndex = 0;
+    vi.stubGlobal("crypto", {
+      randomUUID: () => ["match-uuid-1", "match-uuid-2"][uuidIndex++] ?? "match-uuid-extra",
+    });
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() =>
+        Promise.resolve(new Response(JSON.stringify({ files: {} }), { status: 200 }))
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const board = {
+      boardName: "Board 1",
+      home: "Alice",
+      guest: "Bob",
+      legsHome: 2,
+      legsGuest: 0,
+      status: "finished" as const,
+      highlights: [],
+      updatedAt: "2026-09-02T10:15:00Z",
+      acknowledged: false as const,
+    };
+
+    await uploadFinishedMatchToGist({ token: "token", gistId: "gist-id" }, "device-1", board);
+    await uploadFinishedMatchToGist({ token: "token", gistId: "gist-id" }, "device-1", board);
+
+    const firstPatch = JSON.parse(fetchMock.mock.calls[1][1].body as string) as {
+      files: Record<string, { content: string }>;
+    };
+    const secondPatch = JSON.parse(fetchMock.mock.calls[3][1].body as string) as {
+      files: Record<string, { content: string }>;
+    };
+
+    expect(firstPatch.files).toHaveProperty(boardFileName("device-1", "match-uuid-1"));
+    expect(secondPatch.files).toHaveProperty(boardFileName("device-1", "match-uuid-2"));
   });
 });
