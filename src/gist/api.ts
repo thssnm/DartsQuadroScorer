@@ -24,7 +24,18 @@ interface GistResponse {
 const GIST_API_URL = "https://api.github.com/gists";
 const PLAYERS_FILE = "players.json";
 
-export const boardFileName = (deviceId: string): string => `board-${deviceId}.json`;
+const fallbackMatchFileId = (): string => {
+  const timestamp = new Date().toISOString().replace(/[^0-9A-Z]/gi, "");
+  const random = Math.random().toString(36).slice(2, 10);
+  return `${timestamp}-${random}`;
+};
+
+export const createMatchFileId = (): string => globalThis.crypto?.randomUUID?.() ?? fallbackMatchFileId();
+
+export const boardFileName = (deviceId: string, matchFileId: string): string =>
+  `board-${deviceId}-${matchFileId}.json`;
+
+export const boardFileNamePreview = (deviceId: string): string => boardFileName(deviceId, "<match-id>");
 
 export const defaultBoardName = (deviceId: string): string => `Board ${deviceId.slice(0, 8)}`;
 
@@ -105,7 +116,7 @@ export const uploadFinishedMatchToGist = async (
     },
     body: JSON.stringify({
       files: {
-        [boardFileName(deviceId)]: { content: JSON.stringify(board, null, 2) },
+        [boardFileName(deviceId, createMatchFileId())]: { content: JSON.stringify(board, null, 2) },
         [PLAYERS_FILE]: { content: JSON.stringify(mergedPlayers, null, 2) },
       },
     }),

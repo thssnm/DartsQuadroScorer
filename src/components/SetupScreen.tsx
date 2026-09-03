@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { GistConfig } from "../gist/config";
-import { boardFileName } from "../gist/api";
+import { boardFileNamePreview } from "../gist/api";
 
 interface SetupScreenProps {
   onStart: (nameA: string, nameB: string, legsToWin: number, startingPlayer: 0 | 1) => void;
@@ -91,7 +91,7 @@ export const SetupScreen = ({
         </div>
 
         <div className="setup-device">
-          <span>{boardFileName(deviceId)}</span>
+          <span>{boardFileNamePreview(deviceId)}</span>
           <button type="button" onClick={onResetDeviceId}>
             Geräte-ID zurücksetzen
           </button>
