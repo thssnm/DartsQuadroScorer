@@ -1,4 +1,5 @@
 import type { GameState } from "../game/types";
+import { computeHighlights } from "../game/highlights";
 import type { GistConfig } from "./config";
 
 export interface BoardGistFile {
@@ -8,7 +9,7 @@ export interface BoardGistFile {
   legsHome: number;
   legsGuest: number;
   status: "finished";
-  highlights: unknown[];
+  highlights: string[];
   updatedAt: string;
   acknowledged: false;
 }
@@ -50,7 +51,7 @@ export const mapGameStateToBoardFile = (
   legsHome: state.players[0].legsWon,
   legsGuest: state.players[1].legsWon,
   status: "finished",
-  highlights: [],
+  highlights: computeHighlights(state),
   updatedAt,
   acknowledged: false,
 });
