@@ -2,6 +2,9 @@ import type { GameState } from "./types";
 
 const STORAGE_KEY = "darts-quadro-scorer:game-state";
 const DEVICE_ID_KEY = "darts-quadro-scorer:device-id";
+const BOARD_ID_KEY = "darts-quadro-scorer:board-id";
+
+export const DEFAULT_BOARD_ID = "Board 1";
 
 const createDeviceId = (): string => {
   if (typeof window.crypto?.randomUUID === "function") {
@@ -59,6 +62,23 @@ export const resetDeviceId = (): string => {
     // siehe oben
   }
   return deviceId;
+};
+
+export const loadBoardId = (): string => {
+  try {
+    const boardId = window.localStorage.getItem(BOARD_ID_KEY)?.trim();
+    return boardId || DEFAULT_BOARD_ID;
+  } catch {
+    return DEFAULT_BOARD_ID;
+  }
+};
+
+export const saveBoardId = (boardId: string): void => {
+  try {
+    window.localStorage.setItem(BOARD_ID_KEY, boardId.trim());
+  } catch {
+    // siehe oben
+  }
 };
 
 // Ein Spiel gilt als "fortsetzbar", wenn es über den Setup-Bildschirm
