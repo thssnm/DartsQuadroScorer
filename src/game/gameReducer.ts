@@ -1,5 +1,6 @@
 import type { Dart, DartSlot, GameState, Multiplier, PlayerState, Turn } from "./types";
 import { dartValue, emptySlot, isDoubleFinish, isSlotComplete, slotToDart, turnTotal } from "./types";
+import { checkoutDartIndex } from "./dartCount";
 
 export const START_SCORE = 501;
 
@@ -316,9 +317,15 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
       let invalidReason: string | null = null;
 
       for (let i = turnIndex; i < player.turns.length; i++) {
-        const darts = i === turnIndex ? newDarts : player.turns[i].darts;
-        const lastIdx = i === turnIndex ? (lastRealIdx === -1 ? 2 : lastRealIdx) : darts.length - 1;
-        if (i > turnIndex && runningScore - turnTotal(darts) < 0) {
+        const existingTurn = player.turns[i];
+        const darts = i === turnIndex ? newDarts : existingTurn.darts;
+        const lastIdx =
+          i === turnIndex
+            ? lastRealIdx === -1
+              ? 2
+              : lastRealIdx
+            : checkoutDartIndex(darts, runningScore) ?? darts.length - 1;
+        if (i > turnIndex && !existingTurn.bust && runningScore - turnTotal(darts) < 0) {
           invalidReason = "Diese Änderung würde eine spätere Aufnahme unmöglich machen.";
           break;
         }

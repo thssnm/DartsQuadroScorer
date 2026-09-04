@@ -44,7 +44,7 @@ describe("computeHighlights", () => {
           scoringTurn,
           scoringTurn,
           scoringTurn,
-          checkout([dart(20, 2), dart(0), dart(0)]),
+          checkout([dart(10), dart(10), dart(20, 2)]),
         ],
       },
     ]);

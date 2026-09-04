@@ -1,12 +1,10 @@
 import type { GameState, PlayerState, Turn } from "./types";
 import { turnTotal } from "./types";
+import { dartsInTurns } from "./dartCount";
 
 const FAST_LEG_DART_LIMIT = 18;
 const HIGH_FINISH_MINIMUM = 100;
 const HIGH_TURN_MINIMUM = 170;
-
-const dartsInLeg = (turns: Turn[]): number =>
-  turns.reduce((sum, turn) => sum + turn.darts.length, 0);
 
 const isCheckoutTurn = (leg: PlayerState["legHistory"][number], turn: Turn, turnIndex: number): boolean =>
   leg.won && turnIndex === leg.turns.length - 1 && !turn.bust && turn.scoreAfter === 0;
@@ -38,7 +36,7 @@ export const computeHighlights = (state: GameState): string[] => {
 
         const total = turnTotal(turn.darts);
         if (isCheckoutTurn(leg, turn, turnIndex)) {
-          const darts = dartsInLeg(leg.turns);
+          const darts = dartsInTurns(leg.turns);
           if (darts <= FAST_LEG_DART_LIMIT) {
             highlights.push(`${darts} Darts (${player.name})`);
           }

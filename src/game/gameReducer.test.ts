@@ -8,6 +8,7 @@ import {
   lastFilledSlotIndex,
   type GameAction,
 } from "./gameReducer";
+import { dartsInTurns } from "./dartCount";
 import { computeHighlights } from "./highlights";
 import { computePlayerStats } from "./stats";
 import type { Dart, DartSlot, GameState, Multiplier, PlayerState, Turn } from "./types";
@@ -202,6 +203,41 @@ describe("CONFIRM_TURN", () => {
 });
 
 describe("CONFIRM_EDIT", () => {
+  it("keeps a padded short checkout at its actual dart count after recalculating an earlier turn", () => {
+    let state = playingState(1);
+    const player = {
+      ...state.players[0],
+      remaining: 0,
+      turns: [
+        turn(501, [dart(20, 3), dart(20, 3), dart(20, 3)], 321),
+        turn(321, [dart(20, 4), dart(20, 3), miss()], 181),
+        turn(181, [dart(20, 4), dart(20), miss()], 81),
+        turn(81, [dart(20, 3), dart(20, 3), dart(20, 3)], 81, true),
+        turn(81, [dart(20), dart(20), dart(1)], 40),
+        turn(40, [dart(20, 2), miss(), miss()], 0),
+      ],
+    };
+    state = withPlayer(state, 0, player);
+    state = reduce(state, { type: "EDIT_TURN", playerIndex: 0, turnIndex: 1 });
+    state = reduce(state, { type: "CLEAR_SLOT", index: 0 });
+    state = reduce(state, { type: "CLEAR_SLOT", index: 1 });
+    state = reduce(state, { type: "CLEAR_SLOT", index: 2 });
+    state = setSlot(state, 0, 20, 3);
+    state = setSlot(state, 1, 20, 3);
+    state = setSlot(state, 2, 20);
+
+    const result = reduce(state, { type: "CONFIRM_EDIT" });
+    const wonLeg = result.players[0].legHistory[0];
+    const stats = computePlayerStats(result.players[0]);
+
+    expect(result.phase).toBe("match-finished");
+    expect(wonLeg?.turns.at(-1)?.darts).toEqual([dart(20, 2), miss(), miss()]);
+    expect(dartsInTurns(wonLeg?.turns ?? [])).toBe(16);
+    expect(stats.bestLeg).toEqual({ darts: 16 });
+    expect(stats.matchAverage).toBeCloseTo((501 / 16) * 3);
+    expect(computeHighlights(result)).toContain("16 Darts (A)");
+  });
+
   it("keeps following darts and recalculates the remaining score chain", () => {
     let state = playingState();
     const player = {

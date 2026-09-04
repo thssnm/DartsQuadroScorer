@@ -1,5 +1,6 @@
 import type { CompletedLeg, PlayerState, Turn } from "./types";
 import { turnTotal } from "./types";
+import { dartsInTurns } from "./dartCount";
 
 export interface BestLeg {
   darts: number; // Anzahl geworfener Darts im Leg
@@ -14,7 +15,6 @@ export interface PlayerStats {
   bestLeg: BestLeg | null; // wenigste Darts für ein gewonnenes Leg
 }
 
-const dartsInTurns = (turns: Turn[]) => turns.reduce((sum, t) => sum + t.darts.length, 0);
 const scoreInTurns = (turns: Turn[]) =>
   turns.reduce((sum, t) => sum + (t.bust ? 0 : turnTotal(t.darts)), 0);
 
