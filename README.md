@@ -1,4 +1,4 @@
-# Darts Quadro Scorer
+# Quadro Darts Scorer
 
 501-Scoring-App (Double Out), Eingabe passend zum Harrows Quadro Board
 (x1/x2/x3/x4-Multiplikatoren, Bull 25/50).
