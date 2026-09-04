@@ -20,8 +20,12 @@ const playerWithLegs = (player: PlayerState, legs: CompletedLeg[], legsWon: numb
   legHistory: legs,
 });
 
-const finishedState = (homeLegs: CompletedLeg[], guestLegs: CompletedLeg[] = []): GameState => {
-  const state = createInitialState("Alice", "Bob", 1);
+const finishedState = (
+  homeLegs: CompletedLeg[],
+  guestLegs: CompletedLeg[] = [],
+  names: [string, string] = ["Alice", "Bob"]
+): GameState => {
+  const state = createInitialState(names[0], names[1], 1);
   return {
     ...state,
     phase: "match-finished",
@@ -33,6 +37,33 @@ const finishedState = (homeLegs: CompletedLeg[], guestLegs: CompletedLeg[] = [])
 };
 
 describe("computeHighlights", () => {
+  it("uses the exact dashboard text formats and preserves full player names", () => {
+    const scoringTurn = turn([dart(20), dart(20), dart(20)]);
+    const state = finishedState(
+      [
+        {
+          won: true,
+          turns: [
+            turn([dart(20, 3), dart(20, 3), dart(20, 3)]),
+            scoringTurn,
+            scoringTurn,
+            scoringTurn,
+            scoringTurn,
+            checkout([dart(20, 3), dart(20, 2), dart(16, 2)]),
+          ],
+        },
+      ],
+      [],
+      ["Max Mustermann", "Bob"]
+    );
+
+    expect(computeHighlights(state)).toEqual([
+      "180 (Max Mustermann)",
+      "18 Darts (Max Mustermann)",
+      "132 Finish (Max Mustermann)",
+    ]);
+  });
+
   it("detects a won leg with 18 darts as a fast leg", () => {
     const scoringTurn = turn([dart(20), dart(20), dart(20)]);
     const state = finishedState([
