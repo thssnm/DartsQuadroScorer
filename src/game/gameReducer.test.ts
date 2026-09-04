@@ -120,8 +120,8 @@ describe("slot confirmation helpers", () => {
     expect(lastFilledSlotIndex(slots)).toBe(2);
   });
 
-  it("does not count trailing empty slots as thrown darts", () => {
-    expect(confirmedDarts([slot(20), slot(20, 2), emptySlot()])).toEqual([dart(20), dart(20, 2)]);
+  it("counts trailing empty slots for non-finishing turns", () => {
+    expect(confirmedDarts([slot(20), slot(20, 2), emptySlot()])).toEqual([dart(20), dart(20, 2), miss()]);
   });
 
   it("returns index 2 when all slots are filled", () => {
@@ -151,7 +151,27 @@ describe("CONFIRM_TURN", () => {
 
     expect(result.players[0].remaining).toBe(10);
     expect(result.players[0].turns[0]?.bust).toBe(true);
+    expect(result.players[0].turns[0]?.darts).toEqual([dart(20), miss(), miss()]);
     expect(result.activePlayer).toBe(1);
+  });
+
+  it("counts one filled slot as three darts when the leg continues", () => {
+    let state = playingState();
+    state = setSlot(state, 0, 20);
+
+    const result = reduce(state, { type: "CONFIRM_TURN" });
+
+    expect(result.players[0].turns[0]?.darts).toEqual([dart(20), miss(), miss()]);
+  });
+
+  it("counts two filled slots as three darts when the leg continues", () => {
+    let state = playingState();
+    state = setSlot(state, 0, 20);
+    state = setSlot(state, 1, 20);
+
+    const result = reduce(state, { type: "CONFIRM_TURN" });
+
+    expect(result.players[0].turns[0]?.darts).toEqual([dart(20), dart(20), miss()]);
   });
 
   it("finishes a leg and moves turns to legHistory", () => {
@@ -166,6 +186,29 @@ describe("CONFIRM_TURN", () => {
     expect(result.players[0].turns).toEqual([]);
     expect(result.players[0].legHistory[0]?.won).toBe(true);
     expect(result.players[0].legHistory[0]?.turns[0]?.darts).toEqual([dart(20, 2)]);
+  });
+
+  it("counts a two-dart checkout when the second slot wins the leg", () => {
+    let state = playingState();
+    state = withPlayer(state, 0, { ...state.players[0], remaining: 60 });
+    state = setSlot(state, 0, 20);
+    state = setSlot(state, 1, 20, 2);
+
+    const result = reduce(state, { type: "CONFIRM_TURN" });
+
+    expect(result.players[0].legHistory[0]?.turns[0]?.darts).toEqual([dart(20), dart(20, 2)]);
+  });
+
+  it("counts a three-dart checkout when the third slot wins the leg", () => {
+    let state = playingState();
+    state = withPlayer(state, 0, { ...state.players[0], remaining: 80 });
+    state = setSlot(state, 0, 20);
+    state = setSlot(state, 1, 20);
+    state = setSlot(state, 2, 20, 2);
+
+    const result = reduce(state, { type: "CONFIRM_TURN" });
+
+    expect(result.players[0].legHistory[0]?.turns[0]?.darts).toEqual([dart(20), dart(20), dart(20, 2)]);
   });
 
   it("finishes the match when the player reaches legsToWin", () => {
@@ -200,9 +243,66 @@ describe("CONFIRM_TURN", () => {
     expect(stats.matchAverage).toBeCloseTo((501 / 8) * 3);
     expect(computeHighlights(result)).toContain("8 Darts (A)");
   });
+
+  it("keeps a full-leg total at 10 darts when the final turn is a one-dart checkout", () => {
+    let state = playingState(1);
+    state = withPlayer(state, 0, {
+      ...state.players[0],
+      remaining: 40,
+      turns: [
+        turn(501, [dart(20, 3), dart(20, 3), dart(20, 3)], 321),
+        turn(321, [dart(20, 4), dart(20, 3), miss()], 181),
+        turn(181, [dart(20, 4), dart(20, 3), dart(1)], 40),
+      ],
+    });
+    state = setSlot(state, 0, 20, 2);
+
+    const result = reduce(state, { type: "CONFIRM_TURN" });
+    const wonLeg = result.players[0].legHistory[0];
+    const stats = computePlayerStats(result.players[0]);
+
+    expect(wonLeg?.turns.at(-1)?.darts).toEqual([dart(20, 2)]);
+    expect(dartsInTurns(wonLeg?.turns ?? [])).toBe(10);
+    expect(stats.bestLeg).toEqual({ darts: 10 });
+    expect(stats.matchAverage).toBeCloseTo((501 / 10) * 3);
+    expect(computeHighlights(result)).toContain("10 Darts (A)");
+  });
 });
 
 describe("CONFIRM_EDIT", () => {
+  it("keeps a full-leg total at 10 darts after editing an earlier turn before a one-dart checkout", () => {
+    let state = playingState(1);
+    const player = {
+      ...state.players[0],
+      remaining: 0,
+      turns: [
+        turn(501, [dart(20, 3), dart(20, 3), dart(20, 3)], 321),
+        turn(321, [dart(20, 4), dart(20, 3), miss()], 181),
+        turn(181, [dart(20, 4), dart(20, 3), dart(1)], 40),
+        turn(40, [dart(20, 2)], 0),
+      ],
+    };
+    state = withPlayer(state, 0, player);
+    state = reduce(state, { type: "EDIT_TURN", playerIndex: 0, turnIndex: 1 });
+    state = reduce(state, { type: "CLEAR_SLOT", index: 0 });
+    state = reduce(state, { type: "CLEAR_SLOT", index: 1 });
+    state = reduce(state, { type: "CLEAR_SLOT", index: 2 });
+    state = setSlot(state, 0, 20, 3);
+    state = setSlot(state, 1, 20, 3);
+    state = setSlot(state, 2, 20);
+
+    const result = reduce(state, { type: "CONFIRM_EDIT" });
+    const wonLeg = result.players[0].legHistory[0];
+    const stats = computePlayerStats(result.players[0]);
+
+    expect(result.phase).toBe("match-finished");
+    expect(wonLeg?.turns.at(-1)?.darts).toEqual([dart(20, 2)]);
+    expect(dartsInTurns(wonLeg?.turns ?? [])).toBe(10);
+    expect(stats.bestLeg).toEqual({ darts: 10 });
+    expect(stats.matchAverage).toBeCloseTo((501 / 10) * 3);
+    expect(computeHighlights(result)).toContain("10 Darts (A)");
+  });
+
   it("keeps a padded short checkout at its actual dart count after recalculating an earlier turn", () => {
     let state = playingState(1);
     const player = {
@@ -231,7 +331,7 @@ describe("CONFIRM_EDIT", () => {
     const stats = computePlayerStats(result.players[0]);
 
     expect(result.phase).toBe("match-finished");
-    expect(wonLeg?.turns.at(-1)?.darts).toEqual([dart(20, 2), miss(), miss()]);
+    expect(wonLeg?.turns.at(-1)?.darts).toEqual([dart(20, 2)]);
     expect(dartsInTurns(wonLeg?.turns ?? [])).toBe(16);
     expect(stats.bestLeg).toEqual({ darts: 16 });
     expect(stats.matchAverage).toBeCloseTo((501 / 16) * 3);
