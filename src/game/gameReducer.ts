@@ -1,6 +1,5 @@
 import type { Dart, DartSlot, GameState, Multiplier, PlayerState, Turn } from "./types";
 import { dartValue, emptySlot, isDoubleFinish, isSlotComplete, slotToDart, turnTotal } from "./types";
-import { checkoutDartIndex } from "./dartCount";
 
 export const START_SCORE = 501;
 
@@ -51,6 +50,16 @@ interface TurnOutcome {
   legWon: boolean;
 }
 
+const checkoutDartIndex = (darts: Dart[], scoreBefore: number): number | null => {
+  let total = 0;
+  for (let i = 0; i < darts.length; i++) {
+    const dart = darts[i];
+    total += dartValue(dart);
+    if (total === scoreBefore && isDoubleFinish(dart)) return i;
+  }
+  return null;
+};
+
 // Berechnet das Ergebnis einer Aufnahme nach Double-Out-Regeln.
 // Bust wenn: Rest < 0, Rest === 1, oder Rest === 0 aber letzter Dart kein Double.
 // lastRealDartIndex gibt an, welcher der 3 Darts der zuletzt tatsächlich
@@ -86,13 +95,13 @@ const clampMultiplier = (segment: number | null, multiplier: Multiplier): Multip
   return multiplier;
 };
 
-// Wandelt die aktuellen Slots in geworfene Darts um. Leere Slots vor dem
-// letzten befüllten Slot zählen als Fehlwurf, leere Slots danach nicht.
-// Eine komplett leere bestätigte Aufnahme bleibt eine volle 0er-Aufnahme.
+// Erstes Slot-Abbild für die Auswertung: leere Slots zählen vorläufig als
+// 0-Darts. Ob trailing leere Slots wirklich zählen, entscheidet erst das
+// finale Turn-Objekt nach der LegWon-Auswertung.
 export const confirmedDarts = (slots: [DartSlot, DartSlot, DartSlot]): Dart[] =>
-  slots
-    .slice(0, lastFilledSlotIndex(slots) + 1 || slots.length)
-    .map((s) => (isSlotComplete(s) ? (slotToDart(s) as Dart) : { segment: 0, multiplier: 1 as Multiplier }));
+  slots.map((s) =>
+    isSlotComplete(s) ? (slotToDart(s) as Dart) : { segment: 0, multiplier: 1 as Multiplier }
+  );
 
 // Index des zuletzt tatsächlich AUSGEFÜLLTEN Slots (nicht des letzten in
 // der Reihe) - relevant für die Double-Out-Prüfung. -1 wenn alle leer.
@@ -101,6 +110,20 @@ export const lastFilledSlotIndex = (slots: [DartSlot, DartSlot, DartSlot]): numb
     if (isSlotComplete(slots[i])) return i;
   }
   return -1;
+};
+
+const finalizedTurnDarts = (
+  darts: Dart[],
+  outcome: TurnOutcome,
+  scoreBefore: number,
+  lastRealDartIndex: number
+): Dart[] => {
+  // Zentraler Punkt für die Dart-Zählregel: Nur ein Leg-Gewinn schneidet
+  // Darts nach dem entscheidenden Double ab. Jede andere Aufnahme behält
+  // drei Slots, auch wenn trailing Slots leer als 0-Darts bestätigt wurden.
+  if (!outcome.legWon) return darts;
+  const finishIndex = checkoutDartIndex(darts, scoreBefore) ?? lastRealDartIndex;
+  return darts.slice(0, finishIndex + 1);
 };
 
 export const gameReducer = (state: GameState, action: GameAction): GameState => {
@@ -167,12 +190,14 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
 
     case "CONFIRM_TURN": {
       if (state.phase !== "playing" || state.editingTurn) return state;
-      const darts = confirmedDarts(state.currentSlots);
+      const candidateDarts = confirmedDarts(state.currentSlots);
       const lastRealIdx = lastFilledSlotIndex(state.currentSlots);
 
       const activeIdx = state.activePlayer;
       const player = state.players[activeIdx];
-      const outcome = evaluateTurn(player.remaining, darts, lastRealIdx === -1 ? 2 : lastRealIdx);
+      const lastRealDartIndex = lastRealIdx === -1 ? 2 : lastRealIdx;
+      const outcome = evaluateTurn(player.remaining, candidateDarts, lastRealDartIndex);
+      const darts = finalizedTurnDarts(candidateDarts, outcome, player.remaining, lastRealDartIndex);
       const turn: Turn = {
         darts,
         scoreBefore: player.remaining,
@@ -318,18 +343,19 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
 
       for (let i = turnIndex; i < player.turns.length; i++) {
         const existingTurn = player.turns[i];
-        const darts = i === turnIndex ? newDarts : existingTurn.darts;
+        const candidateDarts = i === turnIndex ? newDarts : existingTurn.darts;
         const lastIdx =
           i === turnIndex
             ? lastRealIdx === -1
               ? 2
               : lastRealIdx
-            : checkoutDartIndex(darts, runningScore) ?? darts.length - 1;
-        if (i > turnIndex && !existingTurn.bust && runningScore - turnTotal(darts) < 0) {
+            : checkoutDartIndex(candidateDarts, runningScore) ?? candidateDarts.length - 1;
+        if (i > turnIndex && !existingTurn.bust && runningScore - turnTotal(candidateDarts) < 0) {
           invalidReason = "Diese Änderung würde eine spätere Aufnahme unmöglich machen.";
           break;
         }
-        const outcome = evaluateTurn(runningScore, darts, lastIdx);
+        const outcome = evaluateTurn(runningScore, candidateDarts, lastIdx);
+        const darts = finalizedTurnDarts(candidateDarts, outcome, runningScore, lastIdx);
 
         // Ein Leg-Sieg (Rest 0 mit gültigem Double) darf nur beim
         // ursprünglich letzten Turn des Legs auftreten - taucht er jetzt
