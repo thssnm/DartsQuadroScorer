@@ -1,5 +1,6 @@
 import type { GameState } from "../game/types";
 import { computeHighlights } from "../game/highlights";
+import { computePlayerStats } from "../game/stats";
 import type { GistConfig } from "./config";
 
 export interface BoardGistFile {
@@ -8,6 +9,8 @@ export interface BoardGistFile {
   guest: string;
   legsHome: number;
   legsGuest: number;
+  averageHome?: number;
+  averageGuest?: number;
   status: "finished";
   highlights: string[];
   updatedAt: string;
@@ -40,21 +43,32 @@ export const boardFileName = (boardId: string, matchFileId: string): string =>
 
 export const defaultBoardName = (boardId: string): string => boardId.trim() || "Board 1";
 
+const roundedAverage = (average: number): number | undefined => {
+  if (!Number.isFinite(average) || average <= 0) return undefined;
+  return Math.round(average * 10) / 10;
+};
+
 export const mapGameStateToBoardFile = (
   state: GameState,
   boardName: string,
   updatedAt: string = new Date().toISOString()
-): BoardGistFile => ({
-  boardName,
-  home: state.players[0].name,
-  guest: state.players[1].name,
-  legsHome: state.players[0].legsWon,
-  legsGuest: state.players[1].legsWon,
-  status: "finished",
-  highlights: computeHighlights(state),
-  updatedAt,
-  acknowledged: false,
-});
+): BoardGistFile => {
+  const averageHome = roundedAverage(computePlayerStats(state.players[0]).matchAverage);
+  const averageGuest = roundedAverage(computePlayerStats(state.players[1]).matchAverage);
+  return {
+    boardName,
+    home: state.players[0].name,
+    guest: state.players[1].name,
+    legsHome: state.players[0].legsWon,
+    legsGuest: state.players[1].legsWon,
+    ...(averageHome === undefined ? {} : { averageHome }),
+    ...(averageGuest === undefined ? {} : { averageGuest }),
+    status: "finished",
+    highlights: computeHighlights(state),
+    updatedAt,
+    acknowledged: false,
+  };
+};
 
 const authHeaders = (config: GistConfig): Record<string, string> => ({
   Authorization: `Bearer ${config.token.trim()}`,
