@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
       manifest: {
-        name: 'Darts Quadro Scorer',
-        short_name: 'Darts Scorer',
+        name: 'Quadro Darts Scorer',
+        short_name: 'Quadro Darts Scorer',
         description: '501 Double-Out Scoring App für das Harrows Quadro Board',
         theme_color: '#a01818',
         background_color: '#1a1a1e',

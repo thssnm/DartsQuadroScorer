@@ -85,12 +85,13 @@ const clampMultiplier = (segment: number | null, multiplier: Multiplier): Multip
   return multiplier;
 };
 
-// Wandelt die aktuellen Slots in vollständige Darts um. Jede der 3
-// Positionen wird zurückgegeben - unbefüllte Slots werden mit 0 (Fehlwurf)
-// aufgefüllt, egal an welcher Position sie liegen. Das erhält die Reihen-
-// folge für die Anzeige (54 54 20 statt nur 54 54 20 ohne Lücken).
+// Wandelt die aktuellen Slots in geworfene Darts um. Leere Slots vor dem
+// letzten befüllten Slot zählen als Fehlwurf, leere Slots danach nicht.
+// Eine komplett leere bestätigte Aufnahme bleibt eine volle 0er-Aufnahme.
 export const confirmedDarts = (slots: [DartSlot, DartSlot, DartSlot]): Dart[] =>
-  slots.map((s) => (isSlotComplete(s) ? (slotToDart(s) as Dart) : { segment: 0, multiplier: 1 as Multiplier }));
+  slots
+    .slice(0, lastFilledSlotIndex(slots) + 1 || slots.length)
+    .map((s) => (isSlotComplete(s) ? (slotToDart(s) as Dart) : { segment: 0, multiplier: 1 as Multiplier }));
 
 // Index des zuletzt tatsächlich AUSGEFÜLLTEN Slots (nicht des letzten in
 // der Reihe) - relevant für die Double-Out-Prüfung. -1 wenn alle leer.

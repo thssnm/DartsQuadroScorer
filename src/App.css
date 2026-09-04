@@ -221,21 +221,6 @@ body {
   color: #e0c020;
 }
 
-.scoreboard__lastturns {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  padding: 0 24px 12px;
-  gap: 12px;
-  color: var(--text-dim);
-  font-size: 1.3rem;
-}
-
-.turns-list {
-  display: flex;
-  gap: 16px;
-  justify-content: center;
-}
-
 .scoreboard__stats {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr 1fr;

@@ -8,6 +8,8 @@ import {
   lastFilledSlotIndex,
   type GameAction,
 } from "./gameReducer";
+import { computeHighlights } from "./highlights";
+import { computePlayerStats } from "./stats";
 import type { Dart, DartSlot, GameState, Multiplier, PlayerState, Turn } from "./types";
 import { emptySlot } from "./types";
 
@@ -117,6 +119,10 @@ describe("slot confirmation helpers", () => {
     expect(lastFilledSlotIndex(slots)).toBe(2);
   });
 
+  it("does not count trailing empty slots as thrown darts", () => {
+    expect(confirmedDarts([slot(20), slot(20, 2), emptySlot()])).toEqual([dart(20), dart(20, 2)]);
+  });
+
   it("returns index 2 when all slots are filled", () => {
     expect(lastFilledSlotIndex([slot(1), slot(2), slot(3)])).toBe(2);
   });
@@ -158,7 +164,7 @@ describe("CONFIRM_TURN", () => {
     expect(result.players[0].legsWon).toBe(1);
     expect(result.players[0].turns).toEqual([]);
     expect(result.players[0].legHistory[0]?.won).toBe(true);
-    expect(result.players[0].legHistory[0]?.turns[0]?.darts).toEqual([dart(20, 2), miss(), miss()]);
+    expect(result.players[0].legHistory[0]?.turns[0]?.darts).toEqual([dart(20, 2)]);
   });
 
   it("finishes the match when the player reaches legsToWin", () => {
@@ -167,6 +173,31 @@ describe("CONFIRM_TURN", () => {
     state = setSlot(state, 0, 20, 2);
 
     expect(reduce(state, { type: "CONFIRM_TURN" }).phase).toBe("match-finished");
+  });
+
+  it("records a two-dart checkout with the actual dart count for history, stats, and highlights", () => {
+    let state = playingState(1);
+    state = withPlayer(state, 0, {
+      ...state.players[0],
+      remaining: 100,
+      turns: [
+        turn(501, [dart(20, 4), dart(20, 4), dart(20, 4)], 261),
+        turn(261, [dart(20, 4), dart(20, 4), dart(1)], 100),
+      ],
+    });
+    state = setSlot(state, 0, 20, 3);
+    state = setSlot(state, 1, 20, 2);
+
+    const result = reduce(state, { type: "CONFIRM_TURN" });
+    const wonLeg = result.players[0].legHistory[0];
+    const stats = computePlayerStats(result.players[0]);
+
+    expect(result.phase).toBe("match-finished");
+    expect(wonLeg?.turns.at(-1)?.darts).toEqual([dart(20, 3), dart(20, 2)]);
+    expect(wonLeg?.turns.reduce((sum, t) => sum + t.darts.length, 0)).toBe(8);
+    expect(stats.bestLeg).toEqual({ darts: 8 });
+    expect(stats.matchAverage).toBeCloseTo((501 / 8) * 3);
+    expect(computeHighlights(result)).toContain("8 Darts (A)");
   });
 });
 
@@ -256,7 +287,7 @@ describe("CONFIRM_EDIT", () => {
     expect(result.phase).toBe("leg-finished");
     expect(result.players[0].legsWon).toBe(1);
     expect(result.players[0].turns).toEqual([]);
-    expect(result.players[0].legHistory[0]?.turns[0]?.darts).toEqual([dart(20, 2), miss(), miss()]);
+    expect(result.players[0].legHistory[0]?.turns[0]?.darts).toEqual([dart(20, 2)]);
     expect(result.players[1].legHistory[0]?.won).toBe(false);
   });
 });

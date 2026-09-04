@@ -19,9 +19,6 @@ export const Scoreboard = ({ state, onEditTurn }: ScoreboardProps) => {
   const stats0 = computePlayerStats(p0);
   const stats1 = computePlayerStats(p1);
 
-  const lastTurns = (player: typeof p0, count: number) =>
-    player.turns.slice(-count).map((t) => (t.bust ? "BUST" : String(turnTotal(t.darts))));
-
   return (
     <div className="scoreboard">
       <div className="scoreboard__header">
@@ -39,19 +36,6 @@ export const Scoreboard = ({ state, onEditTurn }: ScoreboardProps) => {
         </div>
         <div className={`score-box ${state.activePlayer === 1 ? "active" : ""} ${scoreClass(p1.remaining)}`}>
           {p1.remaining}
-        </div>
-      </div>
-
-      <div className="scoreboard__lastturns">
-        <div className="turns-list">
-          {lastTurns(p0, 3).map((v, i) => (
-            <span key={i}>{v}</span>
-          ))}
-        </div>
-        <div className="turns-list">
-          {lastTurns(p1, 3).map((v, i) => (
-            <span key={i}>{v}</span>
-          ))}
         </div>
       </div>
 
