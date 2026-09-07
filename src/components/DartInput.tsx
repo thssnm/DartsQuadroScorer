@@ -1,6 +1,6 @@
 import type { DartSlot, Multiplier } from "../game/types";
 import { dartValue, isDoubleFinish, isSlotComplete, turnTotal } from "../game/types";
-import { canUseSlotControls, getActiveSlotIndex } from "./dartInputOrder";
+import { canUseMultiplierControls, canUseSlotControls, getActiveSlotIndex } from "./dartInputOrder";
 
 interface DartInputProps {
   slots: [DartSlot, DartSlot, DartSlot];
@@ -116,8 +116,9 @@ export const DartInput = ({
             isActive={activeSlot === i}
             isFinish={i === finishSlotIndex}
             canUseControls={canUseSlotControls(slots, i)}
+            canUseMultipliers={canUseMultiplierControls(slots, i)}
             onSetMultiplier={(m) => {
-              if (!canUseSlotControls(slots, i)) return;
+              if (!canUseMultiplierControls(slots, i)) return;
               onSetMultiplier(i, m);
             }}
             onClear={() => onClearSlot(i)}
@@ -153,6 +154,7 @@ interface DartColumnProps {
   isActive: boolean;
   isFinish: boolean;
   canUseControls: boolean;
+  canUseMultipliers: boolean;
   onSetMultiplier: (m: Multiplier) => void;
   onClear: () => void;
 }
@@ -162,6 +164,7 @@ const DartColumn = ({
   isActive,
   isFinish,
   canUseControls,
+  canUseMultipliers,
   onSetMultiplier,
   onClear,
 }: DartColumnProps) => {
@@ -183,7 +186,7 @@ const DartColumn = ({
             key={m}
             className={`col-mult-btn ${slot.multiplier === m ? "selected" : ""}`}
             onClick={() => onSetMultiplier(m as Multiplier)}
-            disabled={!canUseControls || !canMultiply || (isBull && m > 2)}
+            disabled={!canUseMultipliers || !canMultiply || (isBull && m > 2)}
           >
             x{m}
           </button>

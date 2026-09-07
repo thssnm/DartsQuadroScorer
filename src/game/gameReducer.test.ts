@@ -146,6 +146,25 @@ describe("slot input", () => {
 
     expect(state.currentSlots[0]).toEqual(slot(19, 3));
   });
+
+  it("preserves preselected multipliers when numbers are entered left to right afterwards", () => {
+    let state = playingState();
+    state = reduce(state, { type: "SET_SLOT_MULTIPLIER", index: 1, multiplier: 3 });
+    state = reduce(state, { type: "SET_SLOT_MULTIPLIER", index: 2, multiplier: 4 });
+    state = reduce(state, { type: "SET_SLOT_MULTIPLIER", index: 0, multiplier: 2 });
+
+    expect(state.currentSlots).toEqual([
+      { segment: null, multiplier: 2 },
+      { segment: null, multiplier: 3 },
+      { segment: null, multiplier: 4 },
+    ]);
+
+    state = reduce(state, { type: "SET_SLOT_SEGMENT", index: 0, segment: 1 });
+    state = reduce(state, { type: "SET_SLOT_SEGMENT", index: 1, segment: 2 });
+    state = reduce(state, { type: "SET_SLOT_SEGMENT", index: 2, segment: 3 });
+
+    expect(state.currentSlots).toEqual([slot(1, 2), slot(2, 3), slot(3, 4)]);
+  });
 });
 
 describe("CONFIRM_TURN", () => {
