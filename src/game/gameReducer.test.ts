@@ -129,6 +129,25 @@ describe("slot confirmation helpers", () => {
   });
 });
 
+describe("slot input", () => {
+  it("toggles an active multiplier back to single without clearing the segment", () => {
+    let state = playingState();
+    state = setSlot(state, 0, 20, 2);
+
+    const result = reduce(state, { type: "SET_SLOT_MULTIPLIER", index: 0, multiplier: 2 });
+
+    expect(result.currentSlots[0]).toEqual(slot(20));
+  });
+
+  it("keeps multiplier and segment entry independent within the same slot", () => {
+    let state = playingState();
+    state = reduce(state, { type: "SET_SLOT_MULTIPLIER", index: 0, multiplier: 3 });
+    state = reduce(state, { type: "SET_SLOT_SEGMENT", index: 0, segment: 19 });
+
+    expect(state.currentSlots[0]).toEqual(slot(19, 3));
+  });
+});
+
 describe("CONFIRM_TURN", () => {
   it("reduces remaining and switches active player for a normal turn", () => {
     let state = playingState();
