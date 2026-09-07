@@ -127,11 +127,14 @@ export const DartInput = ({
 
       <div className="dart-input__numbers">
         {NUMBERS.map((n) => (
-          <button key={n} className="num-btn" onClick={() => handleNumber(n)}>
+          <button
+            key={n}
+            className={`num-btn ${n === 0 ? "num-btn--miss" : ""}`}
+            onClick={() => handleNumber(n)}
+          >
             {n}
           </button>
         ))}
-        <span className="num-btn-spacer" aria-hidden="true" />
         <button
           className="confirm-btn"
           onClick={onConfirmTurn}
