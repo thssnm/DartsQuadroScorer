@@ -41,7 +41,6 @@ export const DartInput = ({
   onSwitchStartingPlayer,
 }: DartInputProps) => {
   const activeSlot = getActiveSlotIndex(slots);
-  const hasAnyDart = slots.some((s) => s.segment !== null);
   const completedDarts = slots.filter(isSlotComplete).map((s) => ({
     segment: s.segment,
     multiplier: s.multiplier,
@@ -110,7 +109,7 @@ export const DartInput = ({
           )}
         </div>
         <div className="dart-input__summary-actions">
-          <button className="summary-action-btn" onClick={onUndo} disabled={!canUndo || hasAnyDart}>
+          <button className="summary-action-btn" onClick={onUndo} disabled={!canUndo}>
             Rückgängig
           </button>
           <button className="summary-action-btn" onClick={onAbort}>
