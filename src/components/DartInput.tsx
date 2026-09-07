@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
 import type { DartSlot, Multiplier } from "../game/types";
 import { dartValue, isDoubleFinish, isSlotComplete, turnTotal } from "../game/types";
+import { canUseSlotControls, getActiveSlotIndex } from "./dartInputOrder";
 
 interface DartInputProps {
   slots: [DartSlot, DartSlot, DartSlot];
@@ -10,15 +10,17 @@ interface DartInputProps {
   onClearSlot: (index: number) => void;
   onConfirmTurn: () => void;
   onUndo: () => void;
+  onAbort: () => void;
   canUndo: boolean;
   isEditing: boolean;
   onCancelEdit: () => void;
 }
 
 const NUMBERS = [
-  [1, 2, 3, 4, 5, 6, 7],
-  [8, 9, 10, 11, 12, 13, 14],
-  [15, 16, 17, 18, 19, 20, 25],
+  1, 2, 3, 4, 5, 6,
+  7, 8, 9, 10, 11, 12,
+  13, 14, 15, 16, 17, 18,
+  19, 20, 25, 0,
 ];
 
 export const DartInput = ({
@@ -29,34 +31,12 @@ export const DartInput = ({
   onClearSlot,
   onConfirmTurn,
   onUndo,
+  onAbort,
   canUndo,
   isEditing,
   onCancelEdit,
 }: DartInputProps) => {
-  // Welcher Slot ist gerade zur Eingabe ausgewählt. Jeder der 3 Slots ist
-  // jederzeit direkt antippbar (Reihenfolge egal) - Klick auf eine Spalte
-  // wählt sie aus, egal ob sie schon befüllt ist oder nicht. Zahlen- und
-  // Multiplikator-Taps wirken danach auf den ausgewählten Slot.
-  const [selectedSlot, setSelectedSlot] = useState<number>(0);
-
-  const allEmpty = slots.every((s) => s.segment === null);
-
-  // Sobald eine neue, komplett leere Aufnahme beginnt, springt der Fokus
-  // zurück auf Slot 1 (links) - unabhängig davon, wo er zuvor stand.
-  // Ansonsten springt er automatisch zum nächsten offenen Slot von links
-  // nach rechts weiter, sobald der aktuell ausgewählte befüllt wird.
-  useEffect(() => {
-    if (allEmpty) {
-      setSelectedSlot(0);
-      return;
-    }
-    if (slots[selectedSlot].segment !== null) {
-      const nextOpen = slots.findIndex((s) => s.segment === null);
-      if (nextOpen !== -1) setSelectedSlot(nextOpen);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slots[0].segment, slots[1].segment, slots[2].segment]);
-
+  const activeSlot = getActiveSlotIndex(slots);
   const hasAnyDart = slots.some((s) => s.segment !== null);
   const completedDarts = slots.filter(isSlotComplete).map((s) => ({
     segment: s.segment,
@@ -90,7 +70,8 @@ export const DartInput = ({
   }
 
   const handleNumber = (segment: number) => {
-    onSetSegment(selectedSlot, segment);
+    if (activeSlot === null) return;
+    onSetSegment(activeSlot, segment);
   };
 
   return (
@@ -102,20 +83,29 @@ export const DartInput = ({
         </div>
       )}
       <div className="dart-input__summary">
-        {[0, 1, 2].map((i) => {
-          const slot = slots[i];
-          const value = isSlotComplete(slot) ? dartValue({ segment: slot.segment, multiplier: slot.multiplier }) : null;
-          return (
-            <span key={i} className="summary-value">
-              {value === null ? "-" : value}
-            </span>
-          );
-        })}
-        <span className="summary-total">{runningTotal}</span>
-        <span className="summary-remaining">{remaining - runningTotal}</span>
-        <button className="undo-inline-btn" onClick={onUndo} disabled={!canUndo || hasAnyDart}>
-          RÜCKGÄNGIG
-        </button>
+        <div className="dart-input__summary-values">
+          {[0, 1, 2].map((i) => {
+            const slot = slots[i];
+            const value = isSlotComplete(slot)
+              ? dartValue({ segment: slot.segment, multiplier: slot.multiplier })
+              : null;
+            return (
+              <span key={i} className="summary-value">
+                {value === null ? "-" : value}
+              </span>
+            );
+          })}
+          <span className="summary-total">{runningTotal}</span>
+          <span className="summary-remaining">{remaining - runningTotal}</span>
+        </div>
+        <div className="dart-input__summary-actions">
+          <button className="summary-action-btn" onClick={onUndo} disabled={!canUndo || hasAnyDart}>
+            Rückgängig
+          </button>
+          <button className="summary-action-btn" onClick={onAbort}>
+            Spiel abbrechen
+          </button>
+        </div>
       </div>
 
       <div className="dart-columns">
@@ -123,10 +113,11 @@ export const DartInput = ({
           <DartColumn
             key={i}
             slot={slots[i]}
+            isActive={activeSlot === i}
             isFinish={i === finishSlotIndex}
-            onSelect={() => setSelectedSlot(i)}
+            canUseControls={canUseSlotControls(slots, i)}
             onSetMultiplier={(m) => {
-              setSelectedSlot(i);
+              if (!canUseSlotControls(slots, i)) return;
               onSetMultiplier(i, m);
             }}
             onClear={() => onClearSlot(i)}
@@ -135,55 +126,74 @@ export const DartInput = ({
       </div>
 
       <div className="dart-input__numbers">
-        {NUMBERS.flat().map((n) => (
+        {NUMBERS.map((n) => (
           <button key={n} className="num-btn" onClick={() => handleNumber(n)}>
             {n}
           </button>
         ))}
+        <span className="num-btn-spacer" aria-hidden="true" />
+        <button
+          className="confirm-btn"
+          onClick={onConfirmTurn}
+          aria-label={isEditing ? "Korrektur übernehmen" : "Aufnahme bestätigen"}
+          title={isEditing ? "Korrektur übernehmen" : "Aufnahme bestätigen"}
+        >
+          ✓
+        </button>
       </div>
-
-      <button className="confirm-btn-wide" onClick={onConfirmTurn}>
-        {isEditing ? "✓ Korrektur übernehmen" : "✓ Aufnahme bestätigen"}
-      </button>
     </div>
   );
 };
 
 interface DartColumnProps {
   slot: DartSlot;
+  isActive: boolean;
   isFinish: boolean;
-  onSelect: () => void;
+  canUseControls: boolean;
   onSetMultiplier: (m: Multiplier) => void;
   onClear: () => void;
 }
 
-const DartColumn = ({ slot, isFinish, onSelect, onSetMultiplier, onClear }: DartColumnProps) => {
+const DartColumn = ({
+  slot,
+  isActive,
+  isFinish,
+  canUseControls,
+  onSetMultiplier,
+  onClear,
+}: DartColumnProps) => {
   const isBull = slot.segment === 25;
   const isMiss = slot.segment === 0;
   const canMultiply = !isMiss;
+  const classes = [
+    "dart-column",
+    isActive ? "active" : "",
+    isFinish ? "finish" : "",
+    slot.segment !== null ? "filled" : "",
+  ].filter(Boolean).join(" ");
 
   return (
-    <div className={`dart-column ${isFinish ? "finish" : ""}`}>
+    <div className={classes}>
       <div className="dart-column__multipliers">
         {[2, 3, 4].map((m) => (
           <button
             key={m}
             className={`col-mult-btn ${slot.multiplier === m ? "selected" : ""}`}
             onClick={() => onSetMultiplier(m as Multiplier)}
-            disabled={!canMultiply || (isBull && m > 2)}
+            disabled={!canUseControls || !canMultiply || (isBull && m > 2)}
           >
             x{m}
           </button>
         ))}
       </div>
-      <button className={`dart-column__value ${slot.segment !== null ? "filled" : ""}`} onClick={onSelect}>
+      <button
+        className={`dart-column__value ${slot.segment !== null ? "filled" : ""}`}
+        onClick={() => {
+          if (slot.segment !== null && canUseControls) onClear();
+        }}
+      >
         {formatSlot(slot)}
       </button>
-      {slot.segment !== null && (
-        <button className="dart-column__clear" onClick={onClear}>
-          ✕
-        </button>
-      )}
     </div>
   );
 };

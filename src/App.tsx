@@ -198,80 +198,75 @@ function App() {
       : null;
 
   return (
-    <div className="app">
-      <div className="app__topbar">
-        {settingsButton}
-        <button
-          className="abort-btn"
-          onClick={() => {
+    <>
+      <div className="app__floating-settings">{settingsButton}</div>
+      <div className="app">
+        <Scoreboard
+          state={state}
+          onEditTurn={(playerIndex, turnIndex) => dispatch({ type: "EDIT_TURN", playerIndex, turnIndex })}
+        />
+        <DartInput
+          slots={state.currentSlots}
+          remaining={remainingForInput}
+          onSetSegment={(index, segment) => dispatch({ type: "SET_SLOT_SEGMENT", index, segment })}
+          onSetMultiplier={(index, multiplier) =>
+            dispatch({ type: "SET_SLOT_MULTIPLIER", index, multiplier })
+          }
+          onClearSlot={(index) => dispatch({ type: "CLEAR_SLOT", index })}
+          onConfirmTurn={() => dispatch({ type: state.editingTurn ? "CONFIRM_EDIT" : "CONFIRM_TURN" })}
+          onUndo={() => dispatch({ type: "UNDO_LAST_TURN" })}
+          onAbort={() => {
             if (window.confirm("Spiel wirklich abbrechen und neu starten?")) {
               dispatch({ type: "ABORT_MATCH" });
             }
           }}
-        >
-          Spiel abbrechen
-        </button>
+          canUndo={canUndo}
+          isEditing={!!state.editingTurn}
+          onCancelEdit={() => dispatch({ type: "CANCEL_EDIT" })}
+        />
+
+        {legWinnerForOverlay && (
+          <div className="leg-overlay">
+            <div className="leg-overlay__card">
+              <h1>{legWinnerForOverlay.name} gewinnt das Leg!</h1>
+              <p>
+                Legs: {state.players[0].name} {state.players[0].legsWon} : {state.players[1].legsWon}{" "}
+                {state.players[1].name}
+              </p>
+              <button onClick={() => dispatch({ type: "NEXT_LEG" })}>Nächstes Leg</button>
+            </div>
+          </div>
+        )}
+
+        {matchWinnerForOverlay && (
+          <div className="leg-overlay">
+            <div className="leg-overlay__card">
+              <h1>{matchWinnerForOverlay.name} gewinnt das Match!</h1>
+              <p>
+                {state.players[0].name} {state.players[0].legsWon} : {state.players[1].legsWon}{" "}
+                {state.players[1].name}
+              </p>
+              <p className="leg-overlay__hint">Statistik wird geladen …</p>
+              {gistStatus && <p className="gist-status">{gistStatus}</p>}
+            </div>
+          </div>
+        )}
+
+        {gistStatus && !matchWinnerForOverlay && <div className="gist-toast">{gistStatus}</div>}
+
+        {state.editError && (
+          <div className="leg-overlay">
+            <div className="leg-overlay__card">
+              <h1>Ungültiger Wert</h1>
+              <p>{state.editError}</p>
+              <button onClick={() => dispatch({ type: "DISMISS_EDIT_ERROR" })}>Verstanden</button>
+            </div>
+          </div>
+        )}
       </div>
-      <Scoreboard
-        state={state}
-        onEditTurn={(playerIndex, turnIndex) => dispatch({ type: "EDIT_TURN", playerIndex, turnIndex })}
-      />
-      <DartInput
-        slots={state.currentSlots}
-        remaining={remainingForInput}
-        onSetSegment={(index, segment) => dispatch({ type: "SET_SLOT_SEGMENT", index, segment })}
-        onSetMultiplier={(index, multiplier) =>
-          dispatch({ type: "SET_SLOT_MULTIPLIER", index, multiplier })
-        }
-        onClearSlot={(index) => dispatch({ type: "CLEAR_SLOT", index })}
-        onConfirmTurn={() => dispatch({ type: state.editingTurn ? "CONFIRM_EDIT" : "CONFIRM_TURN" })}
-        onUndo={() => dispatch({ type: "UNDO_LAST_TURN" })}
-        canUndo={canUndo}
-        isEditing={!!state.editingTurn}
-        onCancelEdit={() => dispatch({ type: "CANCEL_EDIT" })}
-      />
-
-      {legWinnerForOverlay && (
-        <div className="leg-overlay">
-          <div className="leg-overlay__card">
-            <h1>{legWinnerForOverlay.name} gewinnt das Leg!</h1>
-            <p>
-              Legs: {state.players[0].name} {state.players[0].legsWon} : {state.players[1].legsWon}{" "}
-              {state.players[1].name}
-            </p>
-            <button onClick={() => dispatch({ type: "NEXT_LEG" })}>Nächstes Leg</button>
-          </div>
-        </div>
-      )}
-
-      {matchWinnerForOverlay && (
-        <div className="leg-overlay">
-          <div className="leg-overlay__card">
-            <h1>{matchWinnerForOverlay.name} gewinnt das Match!</h1>
-            <p>
-              {state.players[0].name} {state.players[0].legsWon} : {state.players[1].legsWon}{" "}
-              {state.players[1].name}
-            </p>
-            <p className="leg-overlay__hint">Statistik wird geladen …</p>
-            {gistStatus && <p className="gist-status">{gistStatus}</p>}
-          </div>
-        </div>
-      )}
-
-      {gistStatus && !matchWinnerForOverlay && <div className="gist-toast">{gistStatus}</div>}
-
-      {state.editError && (
-        <div className="leg-overlay">
-          <div className="leg-overlay__card">
-            <h1>Ungültiger Wert</h1>
-            <p>{state.editError}</p>
-            <button onClick={() => dispatch({ type: "DISMISS_EDIT_ERROR" })}>Verstanden</button>
-          </div>
-        </div>
-      )}
       {settingsModal}
       {uploadErrorPopup}
-    </div>
+    </>
   );
 }
 
