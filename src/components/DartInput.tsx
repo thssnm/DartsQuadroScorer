@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { DartSlot, Multiplier } from "../game/types";
 import { dartValue, isDoubleFinish, isSlotComplete, turnTotal } from "../game/types";
 import { canUseMultiplierControls, canUseSlotControls, getActiveSlotIndex } from "./dartInputOrder";
@@ -7,7 +8,6 @@ interface DartInputProps {
   remaining: number;
   onSetSegment: (index: number, segment: number) => void;
   onSetMultiplier: (index: number, multiplier: Multiplier) => void;
-  onClearSlot: (index: number) => void;
   onConfirmTurn: () => void;
   onUndo: () => void;
   onAbort: () => void;
@@ -30,7 +30,6 @@ export const DartInput = ({
   remaining,
   onSetSegment,
   onSetMultiplier,
-  onClearSlot,
   onConfirmTurn,
   onUndo,
   onAbort,
@@ -40,7 +39,11 @@ export const DartInput = ({
   canSwitchStartingPlayer,
   onSwitchStartingPlayer,
 }: DartInputProps) => {
+  const [focusedSlot, setFocusedSlot] = useState<number | null>(null);
   const activeSlot = getActiveSlotIndex(slots);
+  const validFocusedSlot =
+    focusedSlot !== null && canUseSlotControls(slots, focusedSlot) ? focusedSlot : null;
+  const inputTarget = validFocusedSlot ?? activeSlot;
   const completedDarts = slots.filter(isSlotComplete).map((s) => ({
     segment: s.segment,
     multiplier: s.multiplier,
@@ -73,8 +76,9 @@ export const DartInput = ({
   }
 
   const handleNumber = (segment: number) => {
-    if (activeSlot === null) return;
-    onSetSegment(activeSlot, segment);
+    if (inputTarget === null) return;
+    onSetSegment(inputTarget, segment);
+    setFocusedSlot(null);
   };
 
   return (
@@ -123,7 +127,7 @@ export const DartInput = ({
           <DartColumn
             key={i}
             slot={slots[i]}
-            isActive={activeSlot === i}
+            isActive={inputTarget === i}
             isFinish={i === finishSlotIndex}
             canUseControls={canUseSlotControls(slots, i)}
             canUseMultipliers={canUseMultiplierControls(slots, i)}
@@ -131,7 +135,7 @@ export const DartInput = ({
               if (!canUseMultiplierControls(slots, i)) return;
               onSetMultiplier(i, m);
             }}
-            onClear={() => onClearSlot(i)}
+            onFocus={() => setFocusedSlot(i)}
           />
         ))}
       </div>
@@ -166,7 +170,7 @@ interface DartColumnProps {
   canUseControls: boolean;
   canUseMultipliers: boolean;
   onSetMultiplier: (m: Multiplier) => void;
-  onClear: () => void;
+  onFocus: () => void;
 }
 
 const DartColumn = ({
@@ -176,7 +180,7 @@ const DartColumn = ({
   canUseControls,
   canUseMultipliers,
   onSetMultiplier,
-  onClear,
+  onFocus,
 }: DartColumnProps) => {
   const isBull = slot.segment === 25;
   const isMiss = slot.segment === 0;
@@ -205,7 +209,7 @@ const DartColumn = ({
       <button
         className={`dart-column__value ${slot.segment !== null ? "filled" : ""}`}
         onClick={() => {
-          if (slot.segment !== null && canUseControls) onClear();
+          if (canUseControls) onFocus();
         }}
       >
         {formatSlot(slot)}
