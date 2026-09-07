@@ -218,6 +218,7 @@ function App() {
           onSetMultiplier={(index, multiplier) =>
             dispatch({ type: "SET_SLOT_MULTIPLIER", index, multiplier })
           }
+          onClearSlot={(index) => dispatch({ type: "CLEAR_SLOT", index })}
           onConfirmTurn={() => dispatch({ type: state.editingTurn ? "CONFIRM_EDIT" : "CONFIRM_TURN" })}
           onUndo={() => dispatch({ type: "UNDO_LAST_TURN" })}
           onAbort={() => {
