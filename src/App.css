@@ -457,9 +457,11 @@ body {
   justify-content: space-between;
   gap: 8px;
   padding: 0 4px;
+  overflow-x: auto;
 }
 
 .dart-input__summary-values,
+.dart-input__summary-switch,
 .dart-input__summary-actions {
   display: flex;
   align-items: center;
@@ -473,6 +475,12 @@ body {
 .dart-input__summary-actions {
   gap: 6px;
   flex: 0 0 auto;
+}
+
+.dart-input__summary-switch {
+  flex: 1 1 auto;
+  justify-content: center;
+  min-width: 0;
 }
 
 .summary-value {
@@ -513,8 +521,17 @@ body {
   cursor: not-allowed;
 }
 
-.dart-input__prestart {
-  width: 100%;
+.summary-switch-btn {
+  padding: 9px 14px;
+  background: #145a9d;
+  border: 1px solid #2f8ee5;
+  border-radius: 6px;
+  color: var(--text);
+  box-shadow: 0 0 0 2px rgba(47, 142, 229, 0.18);
+  font-size: 0.82rem;
+  font-weight: bold;
+  cursor: pointer;
+  white-space: nowrap;
 }
 
 .dart-input__numbers {

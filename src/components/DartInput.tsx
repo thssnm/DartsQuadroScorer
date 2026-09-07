@@ -102,6 +102,13 @@ export const DartInput = ({
           <span className="summary-total">{runningTotal}</span>
           <span className="summary-remaining">{remaining - runningTotal}</span>
         </div>
+        <div className="dart-input__summary-switch">
+          {canSwitchStartingPlayer && (
+            <button className="summary-switch-btn" onClick={onSwitchStartingPlayer}>
+              Startspieler wechseln
+            </button>
+          )}
+        </div>
         <div className="dart-input__summary-actions">
           <button className="summary-action-btn" onClick={onUndo} disabled={!canUndo || hasAnyDart}>
             Rückgängig
@@ -129,14 +136,6 @@ export const DartInput = ({
           />
         ))}
       </div>
-
-      {canSwitchStartingPlayer && (
-        <div className="dart-input__prestart">
-          <button className="switch-btn" onClick={onSwitchStartingPlayer}>
-            Startspieler wechseln
-          </button>
-        </div>
-      )}
 
       <div className="dart-input__numbers">
         {NUMBERS.map((n) => (
