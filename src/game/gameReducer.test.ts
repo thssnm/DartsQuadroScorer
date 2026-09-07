@@ -328,6 +328,28 @@ describe("CONFIRM_TURN", () => {
   });
 });
 
+describe("UNDO_LAST_TURN", () => {
+  it("can undo multiple previous turns in the current leg", () => {
+    let state = playingState();
+    state = setSlot(state, 0, 20);
+    state = reduce(state, { type: "CONFIRM_TURN" });
+    state = setSlot(state, 0, 19);
+    state = reduce(state, { type: "CONFIRM_TURN" });
+
+    state = reduce(state, { type: "UNDO_LAST_TURN" });
+
+    expect(state.activePlayer).toBe(1);
+    expect(state.players[1].turns).toEqual([]);
+    expect(state.currentSlots[0]).toEqual(slot(19));
+
+    state = reduce(state, { type: "UNDO_LAST_TURN" });
+
+    expect(state.activePlayer).toBe(0);
+    expect(state.players[0].turns).toEqual([]);
+    expect(state.currentSlots[0]).toEqual(slot(20));
+  });
+});
+
 describe("CONFIRM_EDIT", () => {
   it("keeps a full-leg total at 10 darts after editing an earlier turn before a one-dart checkout", () => {
     let state = playingState(1);
