@@ -21,9 +21,15 @@ import { UploadErrorPopup } from "./components/UploadErrorPopup";
 import { loadGistConfig } from "./gist/config";
 import { testGistConnection } from "./gist/api";
 import { uploadMatchResult } from "./gist/matchUpload";
+import type { GameState } from "./game/types";
 import "./App.css";
 
 const MATCH_OVERLAY_DURATION_MS = 2500;
+
+const hasMatchInput = (state: GameState): boolean =>
+  state.players.some(
+    (player) => player.turns.length > 0 || player.legHistory.some((leg) => leg.turns.length > 0)
+  ) || state.currentSlots.some((slot) => slot.segment !== null || slot.multiplier !== 1);
 
 function App() {
   const [state, dispatch] = useReducer(gameReducer, undefined, () => {
@@ -134,12 +140,11 @@ function App() {
         <SetupScreen
           resultUploadEnabled={resultUploadEnabled}
           gistConfig={loadGistConfig(gistId)}
-          onStart={(nameA, nameB, legsToWin, startingPlayer) => {
+          onStart={(nameA, nameB, legsToWin) => {
             setShowMatchStats(false);
             setGistStatus(null);
             setUploadErrorVisible(false);
             dispatch({ type: "RESET_MATCH", nameA, nameB, legsToWin });
-            if (startingPlayer === 1) dispatch({ type: "SWITCH_STARTING_PLAYER" });
             dispatch({ type: "START_MATCH" });
           }}
         />
@@ -174,6 +179,7 @@ function App() {
 
   const lastThrowerIdx: 0 | 1 = state.activePlayer === 0 ? 1 : 0;
   const canUndo = state.players[lastThrowerIdx].turns.length > 0 && !state.editingTurn;
+  const canSwitchStartingPlayer = state.phase === "playing" && !state.editingTurn && !hasMatchInput(state);
 
   // Beim Bearbeiten einer bereits bestätigten Aufnahme muss die Live-
   // Vorschau (Double-Finish-Erkennung) auf dem Punktestand VOR dieser
@@ -223,6 +229,8 @@ function App() {
           canUndo={canUndo}
           isEditing={!!state.editingTurn}
           onCancelEdit={() => dispatch({ type: "CANCEL_EDIT" })}
+          canSwitchStartingPlayer={canSwitchStartingPlayer}
+          onSwitchStartingPlayer={() => dispatch({ type: "SWITCH_STARTING_PLAYER" })}
         />
 
         {legWinnerForOverlay && (

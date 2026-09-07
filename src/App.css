@@ -513,6 +513,10 @@ body {
   cursor: not-allowed;
 }
 
+.dart-input__prestart {
+  width: 100%;
+}
+
 .dart-input__numbers {
   flex: 1;
   display: grid;

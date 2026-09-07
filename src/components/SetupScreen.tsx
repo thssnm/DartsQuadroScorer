@@ -3,7 +3,7 @@ import type { GistConfig } from "../gist/config";
 import { loadSetupPlayerNames } from "../gist/playerNames";
 
 interface SetupScreenProps {
-  onStart: (nameA: string, nameB: string, legsToWin: number, startingPlayer: 0 | 1) => void;
+  onStart: (nameA: string, nameB: string, legsToWin: number) => void;
   resultUploadEnabled: boolean;
   gistConfig: GistConfig;
 }
@@ -47,7 +47,6 @@ export const SetupScreen = ({ onStart, resultUploadEnabled, gistConfig }: SetupS
   const [nameA, setNameA] = useState("Heim");
   const [nameB, setNameB] = useState("Gast");
   const [legsToWin, setLegsToWin] = useState(2);
-  const [startingPlayer, setStartingPlayer] = useState<0 | 1>(0);
   const [playerNames, setPlayerNames] = useState<string[]>([]);
   const initialPlayerLookup = useRef({ resultUploadEnabled, gistConfig });
 
@@ -85,19 +84,9 @@ export const SetupScreen = ({ onStart, resultUploadEnabled, gistConfig }: SetupS
         </div>
       </div>
 
-      <div className="setup-row">
-        <label>Startspieler</label>
-        <button
-          className="switch-btn"
-          onClick={() => setStartingPlayer((p) => (p === 0 ? 1 : 0))}
-        >
-          {startingPlayer === 0 ? nameA || "Spieler 1" : nameB || "Spieler 2"} beginnt ⇄
-        </button>
-      </div>
-
       <button
         className="start-btn"
-        onClick={() => onStart(nameA || "Spieler 1", nameB || "Spieler 2", legsToWin, startingPlayer)}
+        onClick={() => onStart(nameA || "Spieler 1", nameB || "Spieler 2", legsToWin)}
       >
         Spiel starten
       </button>
