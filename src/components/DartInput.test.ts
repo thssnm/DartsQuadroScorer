@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canUseSlotControls, getActiveSlotIndex } from "./dartInputOrder";
+import { canUseMultiplierControls, canUseSlotControls, getActiveSlotIndex } from "./dartInputOrder";
 import type { DartSlot, Multiplier } from "../game/types";
 import { emptySlot } from "../game/types";
 
@@ -22,5 +22,13 @@ describe("DartInput slot order", () => {
     expect(canUseSlotControls(slots, 0)).toBe(true);
     expect(canUseSlotControls(slots, 1)).toBe(true);
     expect(canUseSlotControls(slots, 2)).toBe(false);
+  });
+
+  it("keeps all multiplier controls available before number entry", () => {
+    const slots: [DartSlot, DartSlot, DartSlot] = [emptySlot(), emptySlot(), emptySlot()];
+
+    expect(canUseMultiplierControls(slots, 0)).toBe(true);
+    expect(canUseMultiplierControls(slots, 1)).toBe(true);
+    expect(canUseMultiplierControls(slots, 2)).toBe(true);
   });
 });

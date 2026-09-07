@@ -13,3 +13,8 @@ export const canUseSlotControls = (
   if (!slot) return false;
   return slot.segment !== null || getActiveSlotIndex(slots) === index;
 };
+
+export const canUseMultiplierControls = (
+  slots: [DartSlot, DartSlot, DartSlot],
+  index: number
+): boolean => Boolean(slots[index]);
