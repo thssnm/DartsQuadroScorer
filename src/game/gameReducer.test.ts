@@ -167,6 +167,27 @@ describe("slot input", () => {
   });
 });
 
+describe("starting player", () => {
+  it("can be switched after opening the game page before the first input", () => {
+    const state = reduce(createInitialState("A", "B", 2), { type: "START_MATCH" });
+
+    const result = reduce(state, { type: "SWITCH_STARTING_PLAYER" });
+
+    expect(result.startingPlayer).toBe(1);
+    expect(result.activePlayer).toBe(1);
+  });
+
+  it("cannot be switched after dart input has started", () => {
+    let state = reduce(createInitialState("A", "B", 2), { type: "START_MATCH" });
+    state = setSlot(state, 0, 20);
+
+    const result = reduce(state, { type: "SWITCH_STARTING_PLAYER" });
+
+    expect(result.startingPlayer).toBe(0);
+    expect(result.activePlayer).toBe(0);
+  });
+});
+
 describe("CONFIRM_TURN", () => {
   it("reduces remaining and switches active player for a normal turn", () => {
     let state = playingState();

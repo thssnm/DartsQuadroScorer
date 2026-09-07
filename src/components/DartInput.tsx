@@ -14,6 +14,8 @@ interface DartInputProps {
   canUndo: boolean;
   isEditing: boolean;
   onCancelEdit: () => void;
+  canSwitchStartingPlayer: boolean;
+  onSwitchStartingPlayer: () => void;
 }
 
 const NUMBERS = [
@@ -35,6 +37,8 @@ export const DartInput = ({
   canUndo,
   isEditing,
   onCancelEdit,
+  canSwitchStartingPlayer,
+  onSwitchStartingPlayer,
 }: DartInputProps) => {
   const activeSlot = getActiveSlotIndex(slots);
   const hasAnyDart = slots.some((s) => s.segment !== null);
@@ -125,6 +129,14 @@ export const DartInput = ({
           />
         ))}
       </div>
+
+      {canSwitchStartingPlayer && (
+        <div className="dart-input__prestart">
+          <button className="switch-btn" onClick={onSwitchStartingPlayer}>
+            Startspieler wechseln
+          </button>
+        </div>
+      )}
 
       <div className="dart-input__numbers">
         {NUMBERS.map((n) => (

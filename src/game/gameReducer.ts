@@ -13,6 +13,11 @@ export const createInitialPlayer = (name: string): PlayerState => ({
 
 const emptySlots = (): [DartSlot, DartSlot, DartSlot] => [emptySlot(), emptySlot(), emptySlot()];
 
+const hasMatchInput = (state: GameState): boolean =>
+  state.players.some(
+    (player) => player.turns.length > 0 || player.legHistory.some((leg) => leg.turns.length > 0)
+  ) || state.currentSlots.some((slot) => slot.segment !== null || slot.multiplier !== 1);
+
 export const createInitialState = (
   nameA: string,
   nameB: string,
@@ -137,7 +142,7 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
     }
 
     case "SWITCH_STARTING_PLAYER": {
-      if (state.phase !== "setup") return state;
+      if (state.phase !== "setup" && (state.phase !== "playing" || hasMatchInput(state))) return state;
       const newStarting = state.startingPlayer === 0 ? 1 : 0;
       return { ...state, startingPlayer: newStarting, activePlayer: newStarting };
     }
