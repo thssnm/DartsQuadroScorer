@@ -8,6 +8,7 @@ interface DartInputProps {
   remaining: number;
   onSetSegment: (index: number, segment: number) => void;
   onSetMultiplier: (index: number, multiplier: Multiplier) => void;
+  onClearSlot: (index: number) => void;
   onConfirmTurn: () => void;
   onUndo: () => void;
   onAbort: () => void;
@@ -30,6 +31,7 @@ export const DartInput = ({
   remaining,
   onSetSegment,
   onSetMultiplier,
+  onClearSlot,
   onConfirmTurn,
   onUndo,
   onAbort,
@@ -41,9 +43,6 @@ export const DartInput = ({
 }: DartInputProps) => {
   const [focusedSlot, setFocusedSlot] = useState<number | null>(null);
   const activeSlot = getActiveSlotIndex(slots);
-  const validFocusedSlot =
-    focusedSlot !== null && canUseSlotControls(slots, focusedSlot) ? focusedSlot : null;
-  const inputTarget = validFocusedSlot ?? activeSlot;
   const completedDarts = slots.filter(isSlotComplete).map((s) => ({
     segment: s.segment,
     multiplier: s.multiplier,
@@ -75,9 +74,24 @@ export const DartInput = ({
     if (finishSlotIndex !== lastFilledIndex) finishSlotIndex = null;
   }
 
+  const canUseSlot = (index: number): boolean =>
+    (finishSlotIndex === null || index <= finishSlotIndex) && canUseSlotControls(slots, index);
+  const validFocusedSlot =
+    focusedSlot !== null && canUseSlot(focusedSlot) ? focusedSlot : null;
+  const inputTarget =
+    activeSlot !== null && finishSlotIndex !== null && activeSlot > finishSlotIndex
+      ? validFocusedSlot
+      : validFocusedSlot ?? activeSlot;
+
   const handleNumber = (segment: number) => {
     if (inputTarget === null) return;
     onSetSegment(inputTarget, segment);
+    setFocusedSlot(null);
+  };
+
+  const handleClear = () => {
+    if (inputTarget === null || !isSlotComplete(slots[inputTarget])) return;
+    onClearSlot(inputTarget);
     setFocusedSlot(null);
   };
 
@@ -129,9 +143,12 @@ export const DartInput = ({
             slot={slots[i]}
             isActive={inputTarget === i}
             isFinish={i === finishSlotIndex}
-            canUseControls={canUseSlotControls(slots, i)}
-            canUseMultipliers={canUseMultiplierControls(slots, i)}
+            canUseControls={canUseSlot(i)}
+            canUseMultipliers={
+              (finishSlotIndex === null || i <= finishSlotIndex) && canUseMultiplierControls(slots, i)
+            }
             onSetMultiplier={(m) => {
+              if (finishSlotIndex !== null && i > finishSlotIndex) return;
               if (!canUseMultiplierControls(slots, i)) return;
               onSetMultiplier(i, m);
             }}
@@ -146,10 +163,20 @@ export const DartInput = ({
             key={n}
             className={`num-btn ${n === 0 ? "num-btn--miss" : ""}`}
             onClick={() => handleNumber(n)}
+            disabled={inputTarget === null}
           >
             {n}
           </button>
         ))}
+        <button
+          className="clear-btn"
+          onClick={handleClear}
+          disabled={inputTarget === null || !isSlotComplete(slots[inputTarget])}
+          aria-label="Zahl löschen"
+          title="Zahl löschen"
+        >
+          X
+        </button>
         <button
           className="confirm-btn"
           onClick={onConfirmTurn}
@@ -211,6 +238,7 @@ const DartColumn = ({
         onClick={() => {
           if (canUseControls) onFocus();
         }}
+        disabled={!canUseControls}
       >
         {formatSlot(slot)}
       </button>

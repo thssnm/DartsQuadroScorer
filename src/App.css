@@ -451,6 +451,11 @@ body {
   border-color: var(--red-bright);
 }
 
+.dart-column__value:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 .dart-input__summary {
   display: flex;
   align-items: center;
@@ -544,6 +549,7 @@ body {
 }
 
 .num-btn,
+.clear-btn,
 .confirm-btn {
   display: flex;
   align-items: center;
@@ -572,9 +578,20 @@ body {
   grid-row: 1;
 }
 
+.clear-btn {
+  grid-column: 8;
+  grid-row: 2;
+  color: var(--text-dim);
+}
+
+.clear-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 .confirm-btn {
   grid-column: 8;
-  grid-row: 2 / 4;
+  grid-row: 3;
   background: #14602a;
   border: 1px solid #1e8a3e;
   font-size: 2rem;
