@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { GameState } from "../game/types";
 import { turnTotal } from "../game/types";
 import { computePlayerStats } from "../game/stats";
@@ -97,6 +98,13 @@ const ScorePanel = ({
     remainingAfter: t.scoreAfter,
     bust: t.bust,
   }));
+  const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+    list.scrollTop = list.scrollHeight;
+  }, [rows.length]);
 
   return (
     <div className="score-panel">
@@ -104,7 +112,7 @@ const ScorePanel = ({
         <span>Punkte</span>
         <span>Score</span>
       </div>
-      <div className="score-panel__list">
+      <div className="score-panel__list" ref={listRef}>
         <div className="score-panel__row">
           <strong></strong>
           <strong>501</strong>
