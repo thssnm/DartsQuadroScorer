@@ -53,9 +53,6 @@ src/App.tsx           UI
 
 **Erst analysieren, Ergebnis zeigen, auf Freigabe warten.** Dann implementieren. Nicht in einem Rutsch.
 
-### Screenshots
-
-Der Container hat keine Browser-Runtime. **Nicht versuchen, Chromium oder Systembibliotheken zu installieren.** Visuelle Prüfung ist Sache des Menschen. Falls ein Bild nötig ist: statisches SVG/HTML exportieren, das der Mensch selbst öffnen kann.
 
 ### Ehrlichkeit
 
