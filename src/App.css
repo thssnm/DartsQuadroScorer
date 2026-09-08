@@ -377,24 +377,22 @@ body {
 }
 
 .dart-input__throw-head {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 16px;
+  overflow-x: auto;
 }
 
 .dart-columns {
   display: flex;
+  --dart-mult-size: clamp(42px, 8vh, 54px);
   gap: 8px;
 }
 
 .dart-column {
-  --dart-mult-size: clamp(42px, 8vh, 54px);
   position: relative;
   display: grid;
   grid-template-columns: repeat(3, var(--dart-mult-size));
   grid-template-rows: auto var(--dart-mult-size);
   align-items: center;
+  flex: 0 0 auto;
   border-radius: 8px;
   padding: 4px;
   outline: 2px solid transparent;
@@ -451,20 +449,26 @@ body {
 
 .dart-input__totals {
   display: grid;
-  justify-items: end;
-  min-width: 110px;
-  padding: 0 4px 4px;
+  grid-template-columns: repeat(3, var(--dart-mult-size));
+  grid-template-rows: auto var(--dart-mult-size);
+  align-items: start;
+  justify-items: center;
+  flex: 0 0 auto;
+  padding: 4px;
   line-height: 1;
 }
 
 .dart-input__totals strong {
+  grid-column: 1 / -1;
   color: var(--text);
-  font-size: 2.2rem;
+  font-size: 1.45rem;
+  line-height: 1.1;
 }
 
 .dart-input__totals span {
+  grid-column: 1 / -1;
   color: var(--text-dim);
-  font-size: 1.65rem;
+  font-size: 1.45rem;
   font-weight: bold;
 }
 
