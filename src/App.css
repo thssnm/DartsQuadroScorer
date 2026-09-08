@@ -384,6 +384,7 @@ body {
   display: flex;
   --dart-mult-size: clamp(42px, 8vh, 54px);
   gap: 8px;
+  width: 100%;
 }
 
 .dart-column {
@@ -397,11 +398,6 @@ body {
   padding: 4px;
   outline: 2px solid transparent;
   outline-offset: -2px;
-}
-
-.dart-column.finish {
-  background: rgba(30, 138, 62, 0.18);
-  outline: 2px solid #1e8a3e;
 }
 
 .dart-column__slot-value {
@@ -473,6 +469,10 @@ body {
   font-weight: bold;
 }
 
+.dart-input__totals span.checkout {
+  color: #3ecf6e;
+}
+
 .dart-input__totals span::before {
   content: "→ ";
 }
@@ -481,6 +481,7 @@ body {
   display: grid;
   grid-template-rows: auto var(--dart-mult-size);
   flex: 0 0 auto;
+  margin-left: auto;
   padding: 4px;
 }
 
@@ -488,7 +489,6 @@ body {
   grid-row: 2;
   align-self: center;
   display: flex;
-  flex-direction: column;
   gap: 4px;
 }
 
@@ -583,12 +583,12 @@ body {
 
 .num-btn--miss {
   grid-column: 8;
-  grid-row: 1;
+  grid-row: 2;
 }
 
 .clear-btn {
   grid-column: 8;
-  grid-row: 2;
+  grid-row: 1;
   color: var(--text-dim);
 }
 

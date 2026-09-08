@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { canUseMultiplierControls, canUseSlotControls, getActiveSlotIndex } from "./dartInputOrder";
+import {
+  canUseMultiplierControls,
+  canUseSlotControls,
+  getActiveSlotIndex,
+  getRunningInputUndoTarget,
+} from "./dartInputOrder";
 import type { DartSlot, Multiplier } from "../game/types";
 import { emptySlot } from "../game/types";
 
@@ -30,5 +35,11 @@ describe("DartInput slot order", () => {
     expect(canUseMultiplierControls(slots, 0)).toBe(true);
     expect(canUseMultiplierControls(slots, 1)).toBe(true);
     expect(canUseMultiplierControls(slots, 2)).toBe(true);
+  });
+
+  it("undoes the running input from right to left", () => {
+    expect(getRunningInputUndoTarget([slot(20), slot(19), slot(18)])).toBe(2);
+    expect(getRunningInputUndoTarget([slot(20), slot(19), emptySlot()])).toBe(1);
+    expect(getRunningInputUndoTarget([emptySlot(), emptySlot(), emptySlot()])).toBe(-1);
   });
 });
