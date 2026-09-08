@@ -486,6 +486,7 @@ body {
   display: grid;
   grid-template-rows: auto var(--dart-mult-size);
   flex: 0 0 auto;
+  margin-left: auto;
   padding: 4px;
 }
 
