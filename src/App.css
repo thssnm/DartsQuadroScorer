@@ -348,7 +348,7 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding: 4px 16px 16px;
+  padding: 4px 0 0;
   background: var(--bg-panel);
   gap: 6px;
 }
@@ -357,6 +357,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin: 0 16px;
   background: rgba(224, 160, 32, 0.15);
   border: 1px solid #e0a020;
   border-radius: 8px;
@@ -377,6 +378,7 @@ body {
 }
 
 .dart-input__throw-head {
+  padding: 0 16px;
   overflow-x: auto;
 }
 
@@ -497,7 +499,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 0 4px;
+  padding: 0 20px;
   overflow-x: auto;
 }
 
@@ -590,6 +592,16 @@ body {
   grid-column: 8;
   grid-row: 1;
   color: var(--text-dim);
+}
+
+.clear-btn svg {
+  width: 42px;
+  height: 30px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.4;
 }
 
 .clear-btn:disabled {
