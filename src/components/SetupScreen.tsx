@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import loveForDartsLogo from "../assets/Love-for-Darts-Logo.svg";
 import type { GistConfig } from "../gist/config";
 import { loadSetupPlayerNames } from "../gist/playerNames";
 
@@ -64,6 +65,17 @@ export const SetupScreen = ({ onStart, resultUploadEnabled, gistConfig }: SetupS
 
   return (
     <div className="setup-screen">
+      <a
+        className="setup-sponsor"
+        href="https://lovefordarts.de"
+        target="_blank"
+        rel="noreferrer"
+        aria-label="Love for Darts Website öffnen"
+      >
+        <span>Partner</span>
+        <img src={loveForDartsLogo} alt="Love for Darts" />
+      </a>
+
       <h1>Neues Spiel — 501 Double Out</h1>
 
       <PlayerNameField label="Spieler 1" value={nameA} playerNames={playerNames} onChange={setNameA} />
