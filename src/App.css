@@ -172,7 +172,7 @@ body {
 .scoreboard__header {
   flex: 0 0 auto;
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   background: var(--bg-panel);
   padding: 6px 24px 4px;
@@ -184,6 +184,9 @@ body {
   text-align: center;
   letter-spacing: 1px;
   color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .player-name.active {

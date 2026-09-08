@@ -26,7 +26,7 @@ export const PlayerNameField = ({ label, value, playerNames, onChange }: PlayerN
   <div className="setup-row">
     <label>{label}</label>
     <div className="setup-player-field">
-      <input value={value} onChange={(e) => onChange(e.target.value)} maxLength={16} />
+      <input value={value} onChange={(e) => onChange(e.target.value)} />
       {playerNames.length > 0 && (
         <select value="" onChange={(e) => onChange(e.target.value)} aria-label={`${label} auswählen`}>
           <option value="" disabled>
