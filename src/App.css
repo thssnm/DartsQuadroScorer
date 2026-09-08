@@ -381,14 +381,14 @@ body {
 }
 
 .dart-input__throw-head {
-  padding: 0 16px;
+  padding: 0;
   overflow-x: auto;
 }
 
 .dart-columns {
   display: flex;
   --dart-mult-size: clamp(42px, 8vh, 54px);
-  gap: 8px;
+  gap: 16px;
   width: 100%;
 }
 
@@ -486,7 +486,6 @@ body {
   display: grid;
   grid-template-rows: auto var(--dart-mult-size);
   flex: 0 0 auto;
-  margin-left: auto;
   padding: 4px;
 }
 
