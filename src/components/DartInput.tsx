@@ -157,7 +157,10 @@ export const DartInput = ({
           aria-label="Letzten Dart zurücknehmen"
           title="Letzten Dart zurücknehmen"
         >
-          ↶
+          <svg viewBox="0 0 32 22" aria-hidden="true" focusable="false">
+            <path d="M11 3h16a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H11L2 11z" />
+            <path d="M20 7l-8 8m0-8 8 8" />
+          </svg>
         </button>
         <button
           className="confirm-btn"
