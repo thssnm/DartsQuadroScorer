@@ -353,13 +353,6 @@ body {
   gap: 6px;
 }
 
-.dart-columns {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  width: 100%;
-}
-
 .dart-input__edit-banner {
   display: flex;
   align-items: center;
@@ -383,10 +376,25 @@ body {
   cursor: pointer;
 }
 
-.dart-column {
-  position: relative;
+.dart-input__throw-head {
   display: flex;
-  flex-direction: column;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dart-columns {
+  display: flex;
+  gap: 8px;
+}
+
+.dart-column {
+  --dart-mult-size: clamp(42px, 8vh, 54px);
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, var(--dart-mult-size));
+  grid-template-rows: auto var(--dart-mult-size);
+  align-items: center;
   border-radius: 8px;
   padding: 4px;
   outline: 2px solid transparent;
@@ -398,14 +406,29 @@ body {
   outline: 2px solid #1e8a3e;
 }
 
+.dart-column__slot-value {
+  grid-column: 1;
+  display: block;
+  min-height: 1.35em;
+  color: var(--text);
+  font-size: 1.45rem;
+  font-weight: bold;
+  line-height: 1.1;
+  text-align: center;
+}
+
 .dart-column__multipliers {
+  grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, var(--dart-mult-size));
+  grid-auto-rows: var(--dart-mult-size);
   gap: 4px;
 }
 
 .col-mult-btn {
-  padding: 9px 0;
+  width: var(--dart-mult-size);
+  height: var(--dart-mult-size);
+  padding: 0;
   background: var(--bg-box);
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -426,6 +449,29 @@ body {
   cursor: not-allowed;
 }
 
+.dart-input__totals {
+  display: grid;
+  justify-items: end;
+  min-width: 110px;
+  padding: 0 4px 4px;
+  line-height: 1;
+}
+
+.dart-input__totals strong {
+  color: var(--text);
+  font-size: 2.2rem;
+}
+
+.dart-input__totals span {
+  color: var(--text-dim);
+  font-size: 1.65rem;
+  font-weight: bold;
+}
+
+.dart-input__totals span::before {
+  content: "→ ";
+}
+
 .dart-input__summary {
   display: flex;
   align-items: center;
@@ -435,16 +481,10 @@ body {
   overflow-x: auto;
 }
 
-.dart-input__summary-values,
 .dart-input__summary-switch,
 .dart-input__summary-actions {
   display: flex;
   align-items: center;
-}
-
-.dart-input__summary-values {
-  gap: 14px;
-  min-width: 0;
 }
 
 .dart-input__summary-actions {
@@ -456,28 +496,6 @@ body {
   flex: 1 1 auto;
   justify-content: center;
   min-width: 0;
-}
-
-.summary-value {
-  font-size: 1.4rem;
-  color: var(--text-dim);
-  min-width: 32px;
-}
-
-.summary-total {
-  font-size: 1.4rem;
-  font-weight: bold;
-  color: var(--text);
-}
-
-.summary-remaining {
-  font-size: 1.4rem;
-  font-weight: bold;
-  color: var(--text-dim);
-}
-
-.summary-remaining::before {
-  content: "→ ";
 }
 
 .summary-action-btn {

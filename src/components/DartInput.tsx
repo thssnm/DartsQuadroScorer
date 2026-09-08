@@ -100,21 +100,6 @@ export const DartInput = ({
         </div>
       )}
       <div className="dart-input__summary">
-        <div className="dart-input__summary-values">
-          {[0, 1, 2].map((i) => {
-            const slot = slots[i];
-            const value = isSlotComplete(slot)
-              ? dartValue({ segment: slot.segment, multiplier: slot.multiplier })
-              : null;
-            return (
-              <span key={i} className="summary-value">
-                {value === null ? "-" : value}
-              </span>
-            );
-          })}
-          <span className="summary-total">{runningTotal}</span>
-          <span className="summary-remaining">{remaining - runningTotal}</span>
-        </div>
         <div className="dart-input__summary-switch">
           {canSwitchStartingPlayer && (
             <button className="summary-switch-btn" onClick={onSwitchStartingPlayer}>
@@ -132,22 +117,28 @@ export const DartInput = ({
         </div>
       </div>
 
-      <div className="dart-columns">
-        {[0, 1, 2].map((i) => (
-          <DartColumn
-            key={i}
-            slot={slots[i]}
-            isFinish={i === finishSlotIndex}
-            canUseMultipliers={
-              (finishSlotIndex === null || i <= finishSlotIndex) && canUseMultiplierControls(slots, i)
-            }
-            onSetMultiplier={(m) => {
-              if (finishSlotIndex !== null && i > finishSlotIndex) return;
-              if (!canUseMultiplierControls(slots, i)) return;
-              onSetMultiplier(i, m);
-            }}
-          />
-        ))}
+      <div className="dart-input__throw-head">
+        <div className="dart-columns">
+          {[0, 1, 2].map((i) => (
+            <DartColumn
+              key={i}
+              slot={slots[i]}
+              isFinish={i === finishSlotIndex}
+              canUseMultipliers={
+                (finishSlotIndex === null || i <= finishSlotIndex) && canUseMultiplierControls(slots, i)
+              }
+              onSetMultiplier={(m) => {
+                if (finishSlotIndex !== null && i > finishSlotIndex) return;
+                if (!canUseMultiplierControls(slots, i)) return;
+                onSetMultiplier(i, m);
+              }}
+            />
+          ))}
+        </div>
+        <div className="dart-input__totals" aria-label="Aufnahme und Restscore">
+          <strong>{runningTotal}</strong>
+          <span>{remaining - runningTotal}</span>
+        </div>
       </div>
 
       <div className="dart-input__numbers">
@@ -207,6 +198,7 @@ const DartColumn = ({
 
   return (
     <div className={classes}>
+      <span className="dart-column__slot-value">{formatSlotValue(slot)}</span>
       <div className="dart-column__multipliers">
         {[2, 3, 4].map((m) => (
           <button
@@ -221,4 +213,9 @@ const DartColumn = ({
       </div>
     </div>
   );
+};
+
+const formatSlotValue = (slot: DartSlot): string => {
+  if (!isSlotComplete(slot)) return "-";
+  return `${dartValue({ segment: slot.segment, multiplier: slot.multiplier })}`;
 };
