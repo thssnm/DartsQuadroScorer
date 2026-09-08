@@ -451,7 +451,6 @@ body {
   display: grid;
   grid-template-columns: repeat(3, var(--dart-mult-size));
   grid-template-rows: auto var(--dart-mult-size);
-  align-items: start;
   justify-items: center;
   flex: 0 0 auto;
   padding: 4px;
@@ -460,6 +459,7 @@ body {
 
 .dart-input__totals strong {
   grid-column: 1 / -1;
+  align-self: center;
   color: var(--text);
   font-size: 1.45rem;
   line-height: 1.1;
@@ -467,6 +467,7 @@ body {
 
 .dart-input__totals span {
   grid-column: 1 / -1;
+  align-self: center;
   color: var(--text-dim);
   font-size: 1.45rem;
   font-weight: bold;
@@ -474,6 +475,21 @@ body {
 
 .dart-input__totals span::before {
   content: "→ ";
+}
+
+.dart-input__throw-actions {
+  display: grid;
+  grid-template-rows: auto var(--dart-mult-size);
+  flex: 0 0 auto;
+  padding: 4px;
+}
+
+.dart-input__throw-action-buttons {
+  grid-row: 2;
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .dart-input__summary {
