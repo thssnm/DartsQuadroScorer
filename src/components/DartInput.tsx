@@ -99,23 +99,15 @@ export const DartInput = ({
           <button onClick={onCancelEdit}>Abbrechen</button>
         </div>
       )}
-      <div className="dart-input__summary">
-        <div className="dart-input__summary-switch">
-          {canSwitchStartingPlayer && (
+      {canSwitchStartingPlayer && (
+        <div className="dart-input__summary">
+          <div className="dart-input__summary-switch">
             <button className="summary-switch-btn" onClick={onSwitchStartingPlayer}>
               Startspieler wechseln
             </button>
-          )}
+          </div>
         </div>
-        <div className="dart-input__summary-actions">
-          <button className="summary-action-btn" onClick={onUndo} disabled={!canUndo}>
-            Rückgängig
-          </button>
-          <button className="summary-action-btn" onClick={onAbort}>
-            Spiel abbrechen
-          </button>
-        </div>
-      </div>
+      )}
 
       <div className="dart-input__throw-head">
         <div className="dart-columns">
@@ -137,6 +129,16 @@ export const DartInput = ({
           <div className="dart-input__totals" aria-label="Aufnahme und Restscore">
             <strong>{runningTotal}</strong>
             <span>{remaining - runningTotal}</span>
+          </div>
+          <div className="dart-input__throw-actions">
+            <div className="dart-input__throw-action-buttons">
+              <button className="summary-action-btn" onClick={onUndo} disabled={!canUndo}>
+                Rückgängig
+              </button>
+              <button className="summary-action-btn" onClick={onAbort}>
+                Spiel abbrechen
+              </button>
+            </div>
           </div>
         </div>
       </div>
