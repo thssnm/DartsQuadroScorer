@@ -134,10 +134,10 @@ export const DartInput = ({
               }}
             />
           ))}
-        </div>
-        <div className="dart-input__totals" aria-label="Aufnahme und Restscore">
-          <strong>{runningTotal}</strong>
-          <span>{remaining - runningTotal}</span>
+          <div className="dart-input__totals" aria-label="Aufnahme und Restscore">
+            <strong>{runningTotal}</strong>
+            <span>{remaining - runningTotal}</span>
+          </div>
         </div>
       </div>
 
