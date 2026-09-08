@@ -1,6 +1,6 @@
 import type { DartSlot, Multiplier } from "../game/types";
 import { dartValue, isDoubleFinish, isSlotComplete, turnTotal } from "../game/types";
-import { canUseMultiplierControls, getActiveSlotIndex } from "./dartInputOrder";
+import { canUseMultiplierControls, getActiveSlotIndex, getRunningInputUndoTarget } from "./dartInputOrder";
 
 interface DartInputProps {
   slots: [DartSlot, DartSlot, DartSlot];
@@ -76,10 +76,7 @@ export const DartInput = ({
     activeSlot !== null && finishSlotIndex !== null && activeSlot > finishSlotIndex
       ? null
       : activeSlot;
-  const clearTarget =
-    inputTarget !== null && isSlotComplete(slots[inputTarget])
-      ? inputTarget
-      : slots.findLastIndex(isSlotComplete);
+  const runningInputUndoTarget = getRunningInputUndoTarget(slots);
 
   const handleNumber = (segment: number) => {
     if (inputTarget === null) return;
@@ -87,8 +84,8 @@ export const DartInput = ({
   };
 
   const handleClear = () => {
-    if (clearTarget === -1) return;
-    onClearSlot(clearTarget);
+    if (runningInputUndoTarget === -1) return;
+    onClearSlot(runningInputUndoTarget);
   };
 
   return (
@@ -115,7 +112,6 @@ export const DartInput = ({
             <DartColumn
               key={i}
               slot={slots[i]}
-              isFinish={i === finishSlotIndex}
               canUseMultipliers={
                 (finishSlotIndex === null || i <= finishSlotIndex) && canUseMultiplierControls(slots, i)
               }
@@ -128,7 +124,7 @@ export const DartInput = ({
           ))}
           <div className="dart-input__totals" aria-label="Aufnahme und Restscore">
             <strong>{runningTotal}</strong>
-            <span>{remaining - runningTotal}</span>
+            <span className={finishSlotIndex === null ? "" : "checkout"}>{remaining - runningTotal}</span>
           </div>
           <div className="dart-input__throw-actions">
             <div className="dart-input__throw-action-buttons">
@@ -157,11 +153,11 @@ export const DartInput = ({
         <button
           className="clear-btn"
           onClick={handleClear}
-          disabled={clearTarget === -1}
-          aria-label="Zahl löschen"
-          title="Zahl löschen"
+          disabled={runningInputUndoTarget === -1}
+          aria-label="Letzten Dart zurücknehmen"
+          title="Letzten Dart zurücknehmen"
         >
-          X
+          ↶
         </button>
         <button
           className="confirm-btn"
@@ -178,28 +174,21 @@ export const DartInput = ({
 
 interface DartColumnProps {
   slot: DartSlot;
-  isFinish: boolean;
   canUseMultipliers: boolean;
   onSetMultiplier: (m: Multiplier) => void;
 }
 
 const DartColumn = ({
   slot,
-  isFinish,
   canUseMultipliers,
   onSetMultiplier,
 }: DartColumnProps) => {
   const isBull = slot.segment === 25;
   const isMiss = slot.segment === 0;
   const canMultiply = !isMiss;
-  const classes = [
-    "dart-column",
-    isFinish ? "finish" : "",
-    slot.segment !== null ? "filled" : "",
-  ].filter(Boolean).join(" ");
 
   return (
-    <div className={classes}>
+    <div className="dart-column">
       <span className="dart-column__slot-value">{formatSlotValue(slot)}</span>
       <div className="dart-column__multipliers">
         {[2, 3, 4].map((m) => (

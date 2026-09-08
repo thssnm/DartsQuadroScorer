@@ -1,5 +1,8 @@
 import type { DartSlot } from "../game/types";
 
+export const getRunningInputUndoTarget = (slots: [DartSlot, DartSlot, DartSlot]): number =>
+  slots.findLastIndex((slot) => slot.segment !== null || slot.multiplier !== 1);
+
 export const getActiveSlotIndex = (slots: [DartSlot, DartSlot, DartSlot]): number | null => {
   const nextOpen = slots.findIndex((s) => s.segment === null);
   return nextOpen === -1 ? null : nextOpen;
