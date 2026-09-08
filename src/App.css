@@ -210,7 +210,7 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  padding: 8px 24px 12px;
+  padding: 8px 24px 6px;
 }
 
 .score-box {
@@ -248,7 +248,7 @@ body {
 .stats-panel,
 .score-panel {
   background: var(--bg-panel);
-  padding: 12px;
+  padding: 6px 12px;
   min-height: 0;
 }
 
@@ -261,23 +261,17 @@ body {
   flex-direction: column;
 }
 
-.stats-panel h3 {
-  margin: 0 0 8px;
-  font-size: 1rem;
-  color: var(--text-dim);
-}
-
 .stats-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
+  gap: 6px;
 }
 
 .stat-box {
   background: var(--bg-box);
   border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 8px;
+  padding: 4px 6px;
   text-align: center;
 }
 
@@ -288,7 +282,8 @@ body {
 }
 
 .stat-box strong {
-  font-size: 1.2rem;
+  font-size: 1.4rem;
+  line-height: 1.1;
 }
 
 .score-panel__header {
@@ -297,7 +292,7 @@ body {
   justify-content: space-between;
   background: var(--red);
   padding: 8px 12px;
-  margin: -12px -12px 8px;
+  margin: -6px -12px 6px;
   font-size: 0.9rem;
 }
 
@@ -353,9 +348,9 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding: 8px 16px 16px;
+  padding: 4px 16px 16px;
   background: var(--bg-panel);
-  gap: 8px;
+  gap: 6px;
 }
 
 .dart-columns {

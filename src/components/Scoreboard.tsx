@@ -52,7 +52,6 @@ export const Scoreboard = ({ state, onEditTurn }: ScoreboardProps) => {
 
 const StatsPanel = ({ stats }: { stats: ReturnType<typeof computePlayerStats> }) => (
   <div className="stats-panel">
-    <h3>Statistiken</h3>
     <div className="stats-grid">
       <div className="stat-box">
         <span>140+</span>
