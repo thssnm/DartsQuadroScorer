@@ -1,7 +1,6 @@
-import { useState } from "react";
 import type { DartSlot, Multiplier } from "../game/types";
 import { dartValue, isDoubleFinish, isSlotComplete, turnTotal } from "../game/types";
-import { canUseMultiplierControls, canUseSlotControls, getActiveSlotIndex } from "./dartInputOrder";
+import { canUseMultiplierControls, getActiveSlotIndex } from "./dartInputOrder";
 
 interface DartInputProps {
   slots: [DartSlot, DartSlot, DartSlot];
@@ -41,7 +40,6 @@ export const DartInput = ({
   canSwitchStartingPlayer,
   onSwitchStartingPlayer,
 }: DartInputProps) => {
-  const [focusedSlot, setFocusedSlot] = useState<number | null>(null);
   const activeSlot = getActiveSlotIndex(slots);
   const completedDarts = slots.filter(isSlotComplete).map((s) => ({
     segment: s.segment,
@@ -74,25 +72,23 @@ export const DartInput = ({
     if (finishSlotIndex !== lastFilledIndex) finishSlotIndex = null;
   }
 
-  const canUseSlot = (index: number): boolean =>
-    (finishSlotIndex === null || index <= finishSlotIndex) && canUseSlotControls(slots, index);
-  const validFocusedSlot =
-    focusedSlot !== null && canUseSlot(focusedSlot) ? focusedSlot : null;
   const inputTarget =
     activeSlot !== null && finishSlotIndex !== null && activeSlot > finishSlotIndex
-      ? validFocusedSlot
-      : validFocusedSlot ?? activeSlot;
+      ? null
+      : activeSlot;
+  const clearTarget =
+    inputTarget !== null && isSlotComplete(slots[inputTarget])
+      ? inputTarget
+      : slots.findLastIndex(isSlotComplete);
 
   const handleNumber = (segment: number) => {
     if (inputTarget === null) return;
     onSetSegment(inputTarget, segment);
-    setFocusedSlot(null);
   };
 
   const handleClear = () => {
-    if (inputTarget === null || !isSlotComplete(slots[inputTarget])) return;
-    onClearSlot(inputTarget);
-    setFocusedSlot(null);
+    if (clearTarget === -1) return;
+    onClearSlot(clearTarget);
   };
 
   return (
@@ -141,9 +137,7 @@ export const DartInput = ({
           <DartColumn
             key={i}
             slot={slots[i]}
-            isActive={inputTarget === i}
             isFinish={i === finishSlotIndex}
-            canUseControls={canUseSlot(i)}
             canUseMultipliers={
               (finishSlotIndex === null || i <= finishSlotIndex) && canUseMultiplierControls(slots, i)
             }
@@ -152,7 +146,6 @@ export const DartInput = ({
               if (!canUseMultiplierControls(slots, i)) return;
               onSetMultiplier(i, m);
             }}
-            onFocus={() => setFocusedSlot(i)}
           />
         ))}
       </div>
@@ -171,7 +164,7 @@ export const DartInput = ({
         <button
           className="clear-btn"
           onClick={handleClear}
-          disabled={inputTarget === null || !isSlotComplete(slots[inputTarget])}
+          disabled={clearTarget === -1}
           aria-label="Zahl löschen"
           title="Zahl löschen"
         >
@@ -192,29 +185,22 @@ export const DartInput = ({
 
 interface DartColumnProps {
   slot: DartSlot;
-  isActive: boolean;
   isFinish: boolean;
-  canUseControls: boolean;
   canUseMultipliers: boolean;
   onSetMultiplier: (m: Multiplier) => void;
-  onFocus: () => void;
 }
 
 const DartColumn = ({
   slot,
-  isActive,
   isFinish,
-  canUseControls,
   canUseMultipliers,
   onSetMultiplier,
-  onFocus,
 }: DartColumnProps) => {
   const isBull = slot.segment === 25;
   const isMiss = slot.segment === 0;
   const canMultiply = !isMiss;
   const classes = [
     "dart-column",
-    isActive ? "active" : "",
     isFinish ? "finish" : "",
     slot.segment !== null ? "filled" : "",
   ].filter(Boolean).join(" ");
@@ -233,23 +219,6 @@ const DartColumn = ({
           </button>
         ))}
       </div>
-      <button
-        className={`dart-column__value ${slot.segment !== null ? "filled" : ""}`}
-        onClick={() => {
-          if (canUseControls) onFocus();
-        }}
-        disabled={!canUseControls}
-      >
-        {formatSlot(slot)}
-      </button>
     </div>
   );
-};
-
-const formatSlot = (slot: DartSlot): string => {
-  if (slot.segment === null) return "-";
-  if (slot.segment === 0) return "0";
-  if (slot.segment === 25) return slot.multiplier === 2 ? "B50" : "B25";
-  if (slot.multiplier === 1) return `${slot.segment}`;
-  return `${slot.multiplier}x${slot.segment}`;
 };
