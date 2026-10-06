@@ -11,6 +11,8 @@ import {
   saveBoardId,
   saveGistId,
   saveResultUploadEnabled,
+  loadMatchConfirmed,
+  saveMatchConfirmed,
   saveMatchUploaded,
 } from "./game/persistence";
 import { SetupScreen } from "./components/SetupScreen";
@@ -37,7 +39,9 @@ function App() {
     if (saved && isResumableState(saved)) return saved;
     return createInitialState("Heim", "Gast", 2);
   });
-  const [showMatchStats, setShowMatchStats] = useState(false);
+  // Ein mit "Weiter" bestätigtes Match bleibt bestätigt - nach einem Reload
+  // geht es direkt zur Statistik, nicht zurück ins Match-Ende-Popup.
+  const [showMatchStats, setShowMatchStats] = useState(() => loadMatchConfirmed());
   const [boardId, setBoardId] = useState(() => loadBoardId());
   const [gistId, setGistId] = useState(() => loadGistId());
   const [resultUploadEnabled, setResultUploadEnabled] = useState(() => loadResultUploadEnabled());
@@ -48,7 +52,10 @@ function App() {
   // Das Match gilt erst als abgeschlossen, wenn der Nutzer das Match-Ende-
   // Popup mit "Weiter" bestätigt hat - vorher kann er es noch zurücknehmen.
   const matchConfirmed = matchFinished && showMatchStats;
-  const previousMatchConfirmed = useRef(matchConfirmed);
+  // Beim Start bewusst false: ist ein bereits bestätigtes Match noch nicht
+  // hochgeladen (fehlgeschlagener Versuch), bekommt es nach einem Reload
+  // eine neue Chance. Doppelte Uploads verhindert uploadMatchResultOnce.
+  const previousMatchConfirmed = useRef(false);
 
   // Läuft ein Spiel (nicht mehr im Setup), wird jede Änderung sofort
   // gespeichert - so übersteht der Spielstand einen Reload oder das
@@ -57,8 +64,9 @@ function App() {
   useEffect(() => {
     if (state.phase === "setup") {
       clearGameState();
-      // Der Upload-Merker gehört zum gespeicherten Match - mit dem Match
-      // verfällt er, damit das nächste Ergebnis wieder hochgeladen wird.
+      // Beide Merker gehören zum gespeicherten Match - mit dem Match
+      // verfallen sie, damit das nächste Ergebnis wieder hochgeladen wird.
+      saveMatchConfirmed(false);
       saveMatchUploaded(false);
     } else {
       saveGameState(state);
@@ -252,14 +260,13 @@ function App() {
             title={`${matchWinnerForOverlay.name} gewinnt das Match!`}
             summary={legsSummary}
             confirmLabel="Weiter zur Statistik"
-            onConfirm={() => setShowMatchStats(true)}
-            onUndo={() => {
-              // Wurde das Match vor einem Reload schon hochgeladen, muss der
-              // Merker fallen: nach der Korrektur ist es ein anderes
-              // Ergebnis, das hochgeladen werden darf.
-              saveMatchUploaded(false);
-              dispatch({ type: "UNDO_LEG_RESULT" });
+            onConfirm={() => {
+              // Endgültiger Abschluss: ab hier gibt es kein "Rückgängig"
+              // mehr, auch nicht über einen Reload.
+              saveMatchConfirmed(true);
+              setShowMatchStats(true);
             }}
+            onUndo={() => dispatch({ type: "UNDO_LEG_RESULT" })}
           />
         )}
 
