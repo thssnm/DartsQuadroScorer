@@ -129,5 +129,5 @@ package-lock.json   src/assets/Love-for-Darts-Logo.svg   .env*
 
 - Commits laufen unter `thssnm`. `user.name` und `user.email` sind lokal im Repo gesetzt — **nicht überschreiben**.
 - Remote: `thssnm/DartsQuadroScorer`. Kein Force-Push auf `main`.
-- Deployment über Vercel; `VITE_GITHUB_TOKEN` dort als Projekt-Umgebungsvariable hinterlegt (siehe README).
+- Deployment über Vercel, per GitHub-Integration verbunden: **jeder Push auf `main` löst automatisch einen Deploy aus**, ein manueller Schritt entfällt. `VITE_GITHUB_TOKEN` ist dort als Projekt-Umgebungsvariable hinterlegt (siehe README).
 - Nach jedem abgeschlossenen Teilschritt committen. Kleine, nachvollziehbare Commits.
