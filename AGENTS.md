@@ -11,7 +11,7 @@ Regeln im Detail: `docs/mechanic.md`
 ## Stack
 
 - React 18 + TypeScript (strict) + Vite
-- pnpm
+- npm
 - Vitest (Unit), Playwright (E2E, optional)
 - ESLint + Prettier
 - Kein Backend. Persistenz über `localStorage` hinter einem `StorageAdapter`-Interface (`src/storage/`), damit später ein Pocketbase-Adapter ohne Umbau ergänzt werden kann.
@@ -37,7 +37,7 @@ src/App.tsx           UI
 - **Keine Fortschrittserzählung.** Kein "Ich analysiere jetzt...", "Ich habe festgestellt...", "Als nächstes werde ich...".
 - Direkt arbeiten. Am Ende **maximal 10 Zeilen** Zusammenfassung:
   - geänderte Dateien
-  - Testergebnis (`pnpm test`, `pnpm lint`, `pnpm build`)
+  - Testergebnis (`npm test`, `npm run lint`, `npm run build`)
   - offene Punkte oder Rückfragen
 - Keine Wiederholung des Prompts, keine Bestätigungsfloskeln.
 - Code nur zeigen, wenn danach gefragt wird oder es zur Klärung nötig ist.
@@ -116,12 +116,13 @@ Textfarbe wird **pro Region** gesetzt, nicht global — die Regionsfarben haben 
 ## Befehle
 
 ```bash
-pnpm dev                  # Dev-Server, Port 8090
-pnpm test                 # Vitest
-pnpm lint
-pnpm build
-pnpm debug:difficulty     # Technik-Verteilung über 100 Puzzles pro Stufe
-pnpm debug:share-grids    # Streuung und Spoiler-Korrelation der Share-Grids
+npm install                   # Lockfile ist package-lock.json
+npm run dev                   # Dev-Server, Port 8090
+npm test                      # Vitest
+npm run lint
+npm run build
+npm run debug:difficulty      # Technik-Verteilung über 100 Puzzles pro Stufe
+npm run debug:share-grids     # Streuung und Spoiler-Korrelation der Share-Grids
 ```
 
 Die Debug-Skripte sind die primäre Verifikation für Generator- und Share-Grid-Änderungen. **Nutze sie, statt Beispiele zu konstruieren.** Konstruierte Beispiele haben in der Vergangenheit falsche Schlüsse produziert.
@@ -130,7 +131,7 @@ Die Debug-Skripte sind die primäre Verifikation für Generator- und Share-Grid-
 
 ```
 node_modules/   dist/   build/   coverage/   .vite/   .debug/
-*.map   .env*   public/fonts/   pnpm-lock.yaml
+*.map   .env*   public/fonts/   package-lock.json
 ```
 
 ## Git
