@@ -3,9 +3,11 @@ import {
   DEFAULT_BOARD_ID,
   loadBoardId,
   loadGistId,
+  loadMatchUploaded,
   loadResultUploadEnabled,
   saveBoardId,
   saveGistId,
+  saveMatchUploaded,
   saveResultUploadEnabled,
 } from "./persistence";
 
@@ -105,5 +107,31 @@ describe("result upload enabled persistence", () => {
       "true"
     );
     expect(loadResultUploadEnabled()).toBe(true);
+  });
+});
+
+describe("match uploaded persistence", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("defaults to not uploaded", () => {
+    stubLocalStorage();
+
+    expect(loadMatchUploaded()).toBe(false);
+  });
+
+  it("loads a stored upload marker", () => {
+    stubLocalStorage({ "darts-quadro-scorer:match-uploaded": "true" });
+
+    expect(loadMatchUploaded()).toBe(true);
+  });
+
+  it("clears the marker for a new match", () => {
+    stubLocalStorage({ "darts-quadro-scorer:match-uploaded": "true" });
+
+    saveMatchUploaded(false);
+
+    expect(loadMatchUploaded()).toBe(false);
   });
 });

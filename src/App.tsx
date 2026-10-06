@@ -11,6 +11,7 @@ import {
   saveBoardId,
   saveGistId,
   saveResultUploadEnabled,
+  saveMatchUploaded,
 } from "./game/persistence";
 import { SetupScreen } from "./components/SetupScreen";
 import { Scoreboard } from "./components/Scoreboard";
@@ -21,7 +22,7 @@ import { ResultOverlay } from "./components/ResultOverlay";
 import { UploadErrorPopup } from "./components/UploadErrorPopup";
 import { loadGistConfig } from "./gist/config";
 import { testGistConnection } from "./gist/api";
-import { uploadMatchResult } from "./gist/matchUpload";
+import { uploadMatchResultOnce } from "./gist/matchUpload";
 import type { GameState } from "./game/types";
 import "./App.css";
 
@@ -56,6 +57,9 @@ function App() {
   useEffect(() => {
     if (state.phase === "setup") {
       clearGameState();
+      // Der Upload-Merker gehört zum gespeicherten Match - mit dem Match
+      // verfällt er, damit das nächste Ergebnis wieder hochgeladen wird.
+      saveMatchUploaded(false);
     } else {
       saveGameState(state);
     }
@@ -63,14 +67,16 @@ function App() {
 
   // Hochgeladen wird erst nach dem Bestätigen des Match-Ende-Popups: ein
   // über "Rückgängig" zurückgenommenes Match darf nicht im Turniersystem
-  // landen.
+  // landen. Dass dabei pro Match nur ein einziger erfolgreicher Upload
+  // herauskommt - auch wenn das Popup nach einem Reload erneut bestätigt
+  // wird - stellt uploadMatchResultOnce sicher.
   useEffect(() => {
     const changedToMatchConfirmed = !previousMatchConfirmed.current && matchConfirmed;
     previousMatchConfirmed.current = matchConfirmed;
 
     if (!changedToMatchConfirmed) return;
 
-    void uploadMatchResult({
+    void uploadMatchResultOnce({
       enabled: resultUploadEnabled,
       config: loadGistConfig(gistId),
       boardId,
@@ -247,7 +253,13 @@ function App() {
             summary={legsSummary}
             confirmLabel="Weiter zur Statistik"
             onConfirm={() => setShowMatchStats(true)}
-            onUndo={() => dispatch({ type: "UNDO_LEG_RESULT" })}
+            onUndo={() => {
+              // Wurde das Match vor einem Reload schon hochgeladen, muss der
+              // Merker fallen: nach der Korrektur ist es ein anderes
+              // Ergebnis, das hochgeladen werden darf.
+              saveMatchUploaded(false);
+              dispatch({ type: "UNDO_LEG_RESULT" });
+            }}
           />
         )}
 
