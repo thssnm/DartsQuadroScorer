@@ -17,14 +17,13 @@ import { Scoreboard } from "./components/Scoreboard";
 import { DartInput } from "./components/DartInput";
 import { MatchStats } from "./components/MatchStats";
 import { SettingsModal } from "./components/SettingsModal";
+import { ResultOverlay } from "./components/ResultOverlay";
 import { UploadErrorPopup } from "./components/UploadErrorPopup";
 import { loadGistConfig } from "./gist/config";
 import { testGistConnection } from "./gist/api";
 import { uploadMatchResult } from "./gist/matchUpload";
 import type { GameState } from "./game/types";
 import "./App.css";
-
-const MATCH_OVERLAY_DURATION_MS = 2500;
 
 const hasMatchInput = (state: GameState): boolean =>
   state.players.some(
@@ -44,8 +43,11 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [gistStatus, setGistStatus] = useState<string | null>(null);
   const [uploadErrorVisible, setUploadErrorVisible] = useState(false);
-  const previousPhase = useRef(state.phase);
   const matchFinished = state.phase === "match-finished";
+  // Das Match gilt erst als abgeschlossen, wenn der Nutzer das Match-Ende-
+  // Popup mit "Weiter" bestätigt hat - vorher kann er es noch zurücknehmen.
+  const matchConfirmed = matchFinished && showMatchStats;
+  const previousMatchConfirmed = useRef(matchConfirmed);
 
   // Läuft ein Spiel (nicht mehr im Setup), wird jede Änderung sofort
   // gespeichert - so übersteht der Spielstand einen Reload oder das
@@ -59,20 +61,14 @@ function App() {
     }
   }, [state]);
 
-  // Nach Spielende kurz das Sieg-Overlay zeigen, dann automatisch zur
-  // Statistik-Seite weiterleiten.
+  // Hochgeladen wird erst nach dem Bestätigen des Match-Ende-Popups: ein
+  // über "Rückgängig" zurückgenommenes Match darf nicht im Turniersystem
+  // landen.
   useEffect(() => {
-    if (matchFinished) {
-      const timer = setTimeout(() => setShowMatchStats(true), MATCH_OVERLAY_DURATION_MS);
-      return () => clearTimeout(timer);
-    }
-  }, [matchFinished]);
+    const changedToMatchConfirmed = !previousMatchConfirmed.current && matchConfirmed;
+    previousMatchConfirmed.current = matchConfirmed;
 
-  useEffect(() => {
-    const changedToMatchFinished = previousPhase.current !== "match-finished" && matchFinished;
-    previousPhase.current = state.phase;
-
-    if (!changedToMatchFinished) return;
+    if (!changedToMatchConfirmed) return;
 
     void uploadMatchResult({
       enabled: resultUploadEnabled,
@@ -83,7 +79,7 @@ function App() {
       if (result === "uploaded") setGistStatus("Ergebnis in Gist hochgeladen.");
       if (result === "failed") setUploadErrorVisible(true);
     });
-  }, [boardId, gistId, matchFinished, resultUploadEnabled, state]);
+  }, [boardId, gistId, matchConfirmed, resultUploadEnabled, state]);
 
   const updateBoardId = (nextBoardId: string) => {
     setBoardId(nextBoardId);
@@ -203,6 +199,8 @@ function App() {
         : state.players[1]
       : null;
 
+  const legsSummary = `Legs: ${state.players[0].name} ${state.players[0].legsWon} : ${state.players[1].legsWon} ${state.players[1].name}`;
+
   return (
     <>
       <div className="app__floating-settings">{settingsButton}</div>
@@ -234,30 +232,23 @@ function App() {
         />
 
         {legWinnerForOverlay && (
-          <div className="leg-overlay">
-            <div className="leg-overlay__card">
-              <h1>{legWinnerForOverlay.name} gewinnt das Leg!</h1>
-              <p>
-                Legs: {state.players[0].name} {state.players[0].legsWon} : {state.players[1].legsWon}{" "}
-                {state.players[1].name}
-              </p>
-              <button onClick={() => dispatch({ type: "NEXT_LEG" })}>Nächstes Leg</button>
-            </div>
-          </div>
+          <ResultOverlay
+            title={`${legWinnerForOverlay.name} gewinnt das Leg!`}
+            summary={legsSummary}
+            confirmLabel="Nächstes Leg"
+            onConfirm={() => dispatch({ type: "NEXT_LEG" })}
+            onUndo={() => dispatch({ type: "UNDO_LEG_RESULT" })}
+          />
         )}
 
         {matchWinnerForOverlay && (
-          <div className="leg-overlay">
-            <div className="leg-overlay__card">
-              <h1>{matchWinnerForOverlay.name} gewinnt das Match!</h1>
-              <p>
-                {state.players[0].name} {state.players[0].legsWon} : {state.players[1].legsWon}{" "}
-                {state.players[1].name}
-              </p>
-              <p className="leg-overlay__hint">Statistik wird geladen …</p>
-              {gistStatus && <p className="gist-status">{gistStatus}</p>}
-            </div>
-          </div>
+          <ResultOverlay
+            title={`${matchWinnerForOverlay.name} gewinnt das Match!`}
+            summary={legsSummary}
+            confirmLabel="Weiter zur Statistik"
+            onConfirm={() => setShowMatchStats(true)}
+            onUndo={() => dispatch({ type: "UNDO_LEG_RESULT" })}
+          />
         )}
 
         {gistStatus && !matchWinnerForOverlay && <div className="gist-toast">{gistStatus}</div>}

@@ -46,6 +46,7 @@ export type GameAction =
   | { type: "CANCEL_EDIT" }
   | { type: "DISMISS_EDIT_ERROR" }
   | { type: "NEXT_LEG" }
+  | { type: "UNDO_LEG_RESULT" }
   | { type: "ABORT_MATCH" }
   | { type: "RESET_MATCH"; nameA: string; nameB: string; legsToWin: number };
 
@@ -452,6 +453,47 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
         startingPlayer: nextStarting,
         activePlayer: nextStarting,
         currentSlots: emptySlots(),
+        phase: "playing",
+      };
+    }
+
+    // Nimmt einen gerade erfolgten Leg-Abschluss vollständig zurück
+    // ("Rückgängig" im Leg-/Match-Ende-Popup): das zuletzt abgeschlossene
+    // Leg wandert bei BEIDEN Spielern aus legHistory zurück in die laufenden
+    // Turns, legsWon des Siegers sinkt wieder, die Phase geht auf "playing".
+    // Die Punktestände bleiben so, wie sie beim Leg-Ende waren (Sieger 0) -
+    // erst die Korrektur der fraglichen Aufnahme über die Score-Liste
+    // (EDIT_TURN/CONFIRM_EDIT) rechnet die Kette neu durch.
+    case "UNDO_LEG_RESULT": {
+      if (state.phase !== "leg-finished" && state.phase !== "match-finished") return state;
+      if (state.players.every((player) => player.legHistory.length === 0)) return state;
+
+      const players = state.players.map((player) => {
+        const lastLeg = player.legHistory.at(-1);
+        if (!lastLeg) return player;
+        return {
+          ...player,
+          turns: lastLeg.turns,
+          legsWon: lastLeg.won ? player.legsWon - 1 : player.legsWon,
+          legHistory: player.legHistory.slice(0, -1),
+        };
+      }) as [PlayerState, PlayerState];
+
+      // Wer als nächstes wirft, ergibt sich aus den wiederhergestellten
+      // Aufnahmen: der Starter beginnt, danach wird abwechselnd geworfen.
+      const otherIdx: 0 | 1 = state.startingPlayer === 0 ? 1 : 0;
+      const activePlayer: 0 | 1 =
+        players[state.startingPlayer].turns.length > players[otherIdx].turns.length
+          ? otherIdx
+          : state.startingPlayer;
+
+      return {
+        ...state,
+        players,
+        activePlayer,
+        currentSlots: emptySlots(),
+        editingTurn: null,
+        editError: null,
         phase: "playing",
       };
     }
