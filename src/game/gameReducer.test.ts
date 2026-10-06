@@ -508,3 +508,123 @@ describe("CONFIRM_EDIT", () => {
     expect(result.players[1].legHistory[0]?.won).toBe(false);
   });
 });
+
+// Szenario: Die entscheidende Aufnahme war vertippt (D20 statt S20), das
+// Leg wurde dadurch fälschlich beendet. "Rückgängig" im Popup muss den
+// kompletten Leg-Abschluss zurücknehmen, damit die Aufnahme über den
+// normalen Korrektur-Mechanismus bearbeitbar wird.
+describe("UNDO_LEG_RESULT", () => {
+  // Spieler 0 (Starter) wirft die 4. Aufnahme auf Rest 40 und tippt D20
+  // statt S20 - das Leg gilt damit als gewonnen.
+  const legWronglyFinished = (legsToWin = 2): GameState => {
+    let state = playingState(legsToWin);
+    state = withPlayer(state, 0, {
+      ...state.players[0],
+      remaining: 40,
+      turns: [
+        turn(501, [dart(20, 4), dart(20, 4), dart(20, 4)], 261),
+        turn(261, [dart(20, 4), dart(20, 4), dart(1)], 100),
+        turn(100, [dart(20), dart(20), dart(20)], 40),
+      ],
+    });
+    state = withPlayer(state, 1, {
+      ...state.players[1],
+      remaining: 321,
+      turns: [
+        turn(501, [dart(20), dart(20), dart(20)], 441),
+        turn(441, [dart(20), dart(20), dart(20)], 381),
+        turn(381, [dart(20), dart(20), dart(20)], 321),
+      ],
+    });
+    state = setSlot(state, 0, 20, 2);
+    return reduce(state, { type: "CONFIRM_TURN" });
+  };
+
+  it("ignores the action while the match is still running", () => {
+    const state = playingState();
+
+    expect(reduce(state, { type: "UNDO_LEG_RESULT" })).toBe(state);
+  });
+
+  it("restores the finished leg into the editable turn list", () => {
+    const finished = legWronglyFinished();
+    expect(finished.phase).toBe("leg-finished");
+
+    const result = reduce(finished, { type: "UNDO_LEG_RESULT" });
+
+    expect(result.phase).toBe("playing");
+    expect(result.players[0].legsWon).toBe(0);
+    expect(result.players[0].legHistory).toEqual([]);
+    expect(result.players[1].legHistory).toEqual([]);
+    expect(result.players[0].turns).toHaveLength(4);
+    expect(result.players[0].turns.at(-1)?.darts).toEqual([dart(20, 2)]);
+    expect(result.players[1].turns).toHaveLength(3);
+    expect(result.activePlayer).toBe(1);
+    expect(result.editingTurn).toBeNull();
+  });
+
+  it("restores a wrongly finished match as well", () => {
+    const finished = legWronglyFinished(1);
+    expect(finished.phase).toBe("match-finished");
+
+    const result = reduce(finished, { type: "UNDO_LEG_RESULT" });
+
+    expect(result.phase).toBe("playing");
+    expect(result.players[0].legsWon).toBe(0);
+    expect(result.players[0].turns).toHaveLength(4);
+  });
+
+  it("hands the turn back to the starting player when the opponent finished", () => {
+    let state = playingState();
+    state = withPlayer(state, 0, {
+      ...state.players[0],
+      remaining: 100,
+      turns: [turn(501, [dart(20, 4), dart(20, 4), dart(20, 4)], 261)],
+    });
+    state = withPlayer(state, 1, { ...state.players[1], remaining: 40 });
+    state = { ...state, activePlayer: 1 };
+    state = setSlot(state, 0, 20, 2);
+    const finished = reduce(state, { type: "CONFIRM_TURN" });
+
+    const result = reduce(finished, { type: "UNDO_LEG_RESULT" });
+
+    expect(result.players[0].turns).toHaveLength(1);
+    expect(result.players[1].turns).toHaveLength(1);
+    expect(result.activePlayer).toBe(0);
+  });
+
+  it("lets the user correct the mistyped finishing turn and play on", () => {
+    let state = reduce(legWronglyFinished(), { type: "UNDO_LEG_RESULT" });
+
+    // Die fragliche Aufnahme in der Score-Liste anklicken.
+    state = reduce(state, { type: "EDIT_TURN", playerIndex: 0, turnIndex: 3 });
+    expect(state.editingTurn).toEqual({ playerIndex: 0, turnIndex: 3 });
+    expect(state.currentSlots[0]).toEqual(slot(20, 2));
+
+    // D20 zu S20 korrigieren - das Leg ist damit nicht beendet.
+    state = reduce(state, { type: "CLEAR_SLOT", index: 0 });
+    state = setSlot(state, 0, 20);
+    state = reduce(state, { type: "CONFIRM_EDIT" });
+
+    expect(state.phase).toBe("playing");
+    expect(state.editError).toBeNull();
+    expect(state.editingTurn).toBeNull();
+    expect(state.players[0].remaining).toBe(20);
+    expect(state.players[0].legsWon).toBe(0);
+    expect(state.players[0].legHistory).toEqual([]);
+    expect(state.players[0].turns).toHaveLength(4);
+    expect(state.players[0].turns.at(-1)).toEqual(turn(40, [dart(20), miss(), miss()], 20));
+    expect(state.activePlayer).toBe(1);
+
+    // Das Spiel läuft normal weiter: Spieler 1 ist am Wurf.
+    state = setSlot(state, 0, 20);
+    state = setSlot(state, 1, 20);
+    state = setSlot(state, 2, 20);
+    state = reduce(state, { type: "CONFIRM_TURN" });
+
+    expect(state.phase).toBe("playing");
+    expect(state.players[1].turns).toHaveLength(4);
+    expect(state.players[1].remaining).toBe(261);
+    expect(state.activePlayer).toBe(0);
+  });
+});

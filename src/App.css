@@ -808,9 +808,19 @@ body {
   cursor: pointer;
 }
 
-.leg-overlay__hint {
-  font-size: 0.9rem;
-  font-style: italic;
+.leg-overlay__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
+/* Höhere Spezifität nötig, um background/border von
+   .leg-overlay__card button zu überschreiben. */
+.leg-overlay__card .leg-overlay__undo {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
 }
 
 .gist-status,
