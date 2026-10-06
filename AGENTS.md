@@ -4,31 +4,38 @@ Kontext für KI-Agenten, die an diesem Repo arbeiten.
 
 ## Projekt
 
-**Landlines** (landlines.dev) — tägliches Logikrätsel im Browser. Eigene Mechanik namens *Grenzland*: Ein Raster wird vollständig in zusammenhängende Regionen aufgeteilt. Jede Region enthält genau ein Startfeld, dessen Zahl die Regionsgröße vorgibt. Randzahlen geben an, wie oft man beim Lesen einer kompletten Zeile bzw. Spalte eine Regionsgrenze überquert.
+**Quadro Darts Scorer** (`darts-quadro-scorer`) — Scoring-App für 501 Double Out, gebaut für die Bedienung am Board auf Tablet/Handy. Die Eingabe ist auf das Harrows Quadro Board zugeschnitten: Multiplikatoren x1–x4 (Quadro = x4), Bull 25, Bull-Extra 50. Installierbar als PWA, läuft komplett ohne Backend.
 
-Regeln im Detail: `docs/mechanic.md`
+Das Ergebnis eines beendeten Matches kann in ein GitHub Gist geschrieben werden, aus dem ein separates Dashboard-Projekt die Board-Ergebnisse liest.
+
+Bedienung und Spielregeln aus Nutzersicht: `README.md`
 
 ## Stack
 
-- React 18 + TypeScript (strict) + Vite
-- npm
-- Vitest (Unit), Playwright (E2E, optional)
-- ESLint + Prettier
-- Kein Backend. Persistenz über `localStorage` hinter einem `StorageAdapter`-Interface (`src/storage/`), damit später ein Pocketbase-Adapter ohne Umbau ergänzt werden kann.
-- Kein CDN, keine externen Runtime-Requests, keine Telemetrie.
+- React 19 + TypeScript (strict) + Vite 8
+- npm (Lockfile: `package-lock.json`, festgeschrieben über `packageManager` in `package.json`)
+- Vitest 4 für Unit-Tests, kein jsdom — Tests laufen in der Node-Umgebung
+- oxlint (`.oxlintrc.json`), kein ESLint/Prettier
+- PWA über `vite-plugin-pwa` (Konfiguration in `vite.config.ts`)
+- Kein Backend. Persistenz über `localStorage` (`src/game/persistence.ts`). Einziger externer Request: die GitHub-Gist-API.
 
 ## Architektur
 
 ```
-src/core/grenzland/   Solver + Generator, reines TypeScript ohne React
-src/game/             Share-Grid, Spiellogik
-src/storage/          StorageAdapter-Interface + LocalStorageAdapter
-src/App.tsx           UI
+src/game/         Spiellogik: Reducer, Typen, Statistik, Persistenz — ohne React
+src/gist/         GitHub-Gist-Anbindung: Upload, Spielernamen, Config
+src/components/   UI-Komponenten
+src/App.tsx       Komposition, Phasen-Routing, Effekte (Speichern, Upload)
+src/App.css       Styles der gesamten App (eine Datei)
 ```
 
-`src/core/` darf **keine** React-Abhängigkeit haben.
+`src/game/` und `src/gist/` enthalten **kein** JSX und keine React-Imports.
 
----
+### Zustand
+
+Ein einziger `useReducer` in `App.tsx` hält den kompletten Spielzustand (`GameState`, `src/game/types.ts`). Jede Zustandsänderung ist eine Action in `gameReducer`. Lokaler `useState` nur für UI-Belange, die kein Spielzustand sind (Settings-Dialog, Gist-Status, Statistik-Ansicht).
+
+Phasen: `setup` → `playing` → `leg-finished` / `match-finished`.
 
 ## Arbeitsweise
 
@@ -49,10 +56,9 @@ src/App.tsx           UI
 - Keine neuen Dependencies ohne Rückfrage.
 - Keine neue Datei über 300 Zeilen. Bestehende Muster wiederverwenden statt neue einführen.
 
-### Bei Änderungen an Mechanik, Solver oder Generator
+### Bei Änderungen am Reducer
 
-**Erst analysieren, Ergebnis zeigen, auf Freigabe warten.** Dann implementieren. Nicht in einem Rutsch.
-
+`gameReducer` ist der Kern der App. **Erst den betroffenen Case und seine Tests lesen, Analyse zeigen, auf Freigabe warten.** Dann implementieren. Nicht in einem Rutsch.
 
 ### Ehrlichkeit
 
@@ -62,81 +68,66 @@ Wenn eine Anforderung nicht erfüllbar ist oder ein Ergebnis nicht überzeugt: k
 
 ## Nicht ändern ohne Rückfrage
 
-- **Regionsfarben.** Geprüft gegen Deuteranopie, Protanopie und Tritanopie (minimaler Delta-E 42 über alle Paare und Sichtweisen). Jede Farbänderung invalidiert die Barrierefreiheit.
-  ```
-  A #0000fc   B #00e8d8   C #e40058   D #f8b800   E #940084
-  leer #0a0a0c
-  ```
-- **Grau ist ausschließlich dem leeren Feld vorbehalten.** Keine Region darf grau sein.
-- **Schwierigkeits-Gates.** Der Generator verwirft Puzzles, die ohne die Zieltechnik-Stufe lösbar sind. Diese Invariante ist der Kern der Schwierigkeitsklassifikation.
-- **Backtracking/DFS ist nur für den Eindeutigkeitscheck erlaubt**, niemals als Grundlage des Ratings.
-- **Share-Grid darf die Lösung nicht verraten.** Es kodiert Denkpausen pro Feld, nicht die Regionszugehörigkeit. Jede Änderung muss gegen die Regionsgrenzen auf Korrelation geprüft werden.
+Die folgenden Regeln sind in `gameReducer.test.ts` abgesichert. Wer sie ändert, ändert gezählte Ergebnisse — Averages, Best Leg, Highlights im Dashboard.
 
----
+- **Double-Out und Bust.** Bust bei Rest < 0, Rest = 1, oder Rest = 0 ohne Double als letztem *tatsächlich eingegebenem* Dart (`evaluateTurn`). Maßgeblich ist `lastFilledSlotIndex`, nicht der dritte Slot — eine Aufnahme kann mit leeren Slots dahinter bestätigt werden.
+- **Dart-Zählregel.** Nur eine Leg-gewinnende Aufnahme wird hinter dem entscheidenden Double abgeschnitten (`finalizedTurnDarts`). Jede andere Aufnahme zählt drei Darts, auch wenn leere Slots als Fehlwürfe bestätigt wurden. Davon hängen Average (Punkte / Darts × 3) und Best Leg ab.
+- **Korrektur-Mechanismus.** `EDIT_TURN`/`CONFIRM_EDIT` bearbeitet eine Aufnahme des laufenden Legs und rechnet die Rest-Kette ab dort neu durch. Wird eine spätere Aufnahme dadurch rechnerisch unmöglich oder läge ein Leg-Sieg plötzlich an anderer Stelle, wird die gesamte Änderung verworfen und `editError` gesetzt — nie teilweise übernehmen.
+- **Leg-Abschluss zurücknehmen.** `UNDO_LEG_RESULT` ("Rückgängig" im Leg-/Match-Ende-Popup) holt das letzte Leg bei **beiden** Spielern aus `legHistory` in die laufenden Aufnahmen zurück und senkt `legsWon`. Ein reines Zurücksetzen der Phase reicht nicht — die Aufnahmen wären sonst nicht mehr korrigierbar.
+- **"Weiter" im Match-Ende-Popup ist endgültig.** Der Klick setzt `match-confirmed` im `localStorage`; danach führt die App auch nach einem Reload direkt zur Statistik, nicht zurück ins Popup. Sonst entstünde über "Rückgängig" eine Korrektur, deren Ergebnis als zweite Datei im Gist landet.
+- **Ein Upload pro Match.** `uploadMatchResultOnce` setzt `match-uploaded` ausschließlich nach einem *erfolgreichen* Upload — ein fehlgeschlagener Versuch muss wiederholbar bleiben. Beide Merker verfallen mit dem Match (Phase `setup`).
+- **Gist-Dateiformat.** `BoardGistFile` in `src/gist/api.ts` ist die Schnittstelle zum Dashboard: eine Datei `board-<Board>-<uuid>.json` pro beendetem Match mit `status: "finished"` und `acknowledged: false`, dazu die gemergte `players.json`. Feldnamen, `acknowledged`-Semantik und Dateinamensschema nur zusammen mit dem Dashboard ändern.
+- **localStorage-Schlüssel.** Alle unter dem Präfix `darts-quadro-scorer:`. Ein umbenannter Schlüssel verliert den laufenden Spielstand auf den Boards.
 
-## Terminologie (sichtbare Texte)
+## Tests
+
+- `src/game/` und `src/gist/`: reine Unit-Tests gegen die Logik, Szenario-Stil wie in `gameReducer.test.ts`. Zustände über die vorhandenen Helfer (`playingState`, `withPlayer`, `setSlot`) aufbauen.
+- Komponenten: kein DOM-Testing-Setup vorhanden. Gerendert wird mit `renderToStaticMarkup` aus `react-dom/server`, geprüft wird das Markup (siehe `ResultOverlay.test.tsx`, `App.test.tsx`).
+- `window.localStorage` und `fetch` per `vi.stubGlobal` stubben, danach `vi.unstubAllGlobals()` im `afterEach` (siehe `persistence.test.ts`, `matchUpload.test.ts`). Es gibt keine echte `window`-Instanz in der Testumgebung.
+- Keine Netzwerk-Requests in Tests. Der Gist-Upload wird ausschließlich über gestubbtes `fetch` getestet.
+
+## Terminologie (sichtbare Texte, deutsch)
 
 | Verwenden | Nicht verwenden |
 |---|---|
-| Feld | Zelle |
-| Startfeld | Anker |
-| Region | Gebiet, Fläche |
-| Randzahl | Grenzhinweis |
+| Aufnahme | Wurf, Runde |
+| Dart | Pfeil |
+| Rest | Restpunkte, Punktestand |
+| Leg / Match | Satz, Spiel |
+| Fehlwurf | Miss |
+| Quadro (x4) | Vierfach |
 
-Interne Bezeichner im Code (`cell`, `cellPerformance`) bleiben englisch und unverändert.
+Interne Bezeichner im Code (`turn`, `remaining`, `legsWon`) bleiben englisch und unverändert. Kommentare im Code sind deutsch und erklären das *Warum*, nicht das *Was*.
 
-## Modi
+## Gist-Anbindung
 
-- **Daily**: genau ein Puzzle pro Tag, immer Schwierigkeit Medium, Seed aus dem **lokalen** Datum des Spielers (Wechsel um 00:00 Ortszeit). Keine Schwierigkeitsauswahl, kein Nachspielen vergangener Tage, kein Fehlerfeedback.
-- **Endlos**: freie Schwierigkeitswahl, neues Puzzle jederzeit, Fehlerfeedback optional.
-
-## Timer
-
-Gemessen wird **aktive Spielzeit**, nicht Wall-Clock seit Start. Der Timer läuft nur bei `document.visibilityState === 'visible'` und nicht pausiert. Umsetzung über aufaddierte `Date.now()`-Differenzen, nicht über `setInterval`-Zähler (Throttling verfälscht sonst die Zeit).
-
-Zurücksetzen leert das Brett, **nullt aber weder Timer noch `cellPerformance`** — sonst ließe sich die geteilte Zeit manipulieren.
-
-## Fehlerhinweise
-
-Bei vollständig gefülltem, aber falschem Brett wird **ein** verletzter Constraint auf **Regel-Ebene** angezeigt (Regionsgröße, Zusammenhang, Randzahl). Niemals auf Feld-Ebene.
-
-*Der Spieler kann jeden dieser Verstöße selbst durch Nachzählen finden. Die App automatisiert Fleißarbeit, nicht Deduktion.*
-
-## Typografie
-
-Press Start 2P (SIL OFL), lokal unter `public/fonts`, kein CDN.
-
-Nur auf: Titel, Startfeld-Labels, Randzahlen, Timer, Streak-Zahl.
-Nicht auf: Tutorial, Buttons, Menüs, Fehlermeldungen, Share-Panel. Pixel-Fonts erhöhen die Lesezeit; das Tutorial braucht maximale Lesbarkeit.
-
-Textfarbe wird **pro Region** gesetzt, nicht global — die Regionsfarben haben stark unterschiedliche Helligkeiten (L\* von 31.9 bis 83.3).
-
----
+- Token: `VITE_GITHUB_TOKEN` aus `.env` (Vorlage: `.env.example`), zur Buildzeit eingebettet. `.env` nicht committen.
+- Gist-ID und Board-Name werden pro Gerät in den App-Einstellungen gesetzt und liegen im `localStorage`, nicht im Build.
+- Ist der Upload abgeschaltet (Default) oder die Config unvollständig, läuft die App vollständig offline weiter — ein fehlender Token darf nie ein laufendes Spiel stören.
 
 ## Befehle
 
 ```bash
 npm install                   # Lockfile ist package-lock.json
-npm run dev                   # Dev-Server, Port 8090
-npm test                      # Vitest
-npm run lint
-npm run build
-npm run debug:difficulty      # Technik-Verteilung über 100 Puzzles pro Stufe
-npm run debug:share-grids     # Streuung und Spoiler-Korrelation der Share-Grids
+npm run dev                   # Vite Dev-Server
+npm test                      # Vitest (einmaliger Lauf)
+npm run lint                  # oxlint
+npm run build                 # tsc -b && vite build
+npm run preview               # Production-Build lokal servieren
 ```
 
-Die Debug-Skripte sind die primäre Verifikation für Generator- und Share-Grid-Änderungen. **Nutze sie, statt Beispiele zu konstruieren.** Konstruierte Beispiele haben in der Vergangenheit falsche Schlüsse produziert.
+Vor dem Abschluss einer Aufgabe müssen `npm test`, `npm run lint` und `npm run build` grün sein.
 
 ## Nicht durchsuchen
 
 ```
-node_modules/   dist/   build/   coverage/   .vite/   .debug/
-*.map   .env*   public/fonts/   package-lock.json
+node_modules/   dist/   dev-dist/   build/   target/   screenshots/
+package-lock.json   src/assets/Love-for-Darts-Logo.svg   .env*
 ```
 
 ## Git
 
 - Commits laufen unter `thssnm`. `user.name` und `user.email` sind lokal im Repo gesetzt — **nicht überschreiben**.
-- Kein Force-Push auf `main`. Der Deploy-Hook von statichost.eu pullt von `main`; eine umgeschriebene Historie bricht den Build.
-- Deploy: Push auf `main` triggert automatisch einen Build auf statichost.eu.
+- Remote: `thssnm/DartsQuadroScorer`. Kein Force-Push auf `main`.
+- Deployment über Vercel; `VITE_GITHUB_TOKEN` dort als Projekt-Umgebungsvariable hinterlegt (siehe README).
 - Nach jedem abgeschlossenen Teilschritt committen. Kleine, nachvollziehbare Commits.
