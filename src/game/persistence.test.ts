@@ -3,10 +3,12 @@ import {
   DEFAULT_BOARD_ID,
   loadBoardId,
   loadGistId,
+  loadMatchConfirmed,
   loadMatchUploaded,
   loadResultUploadEnabled,
   saveBoardId,
   saveGistId,
+  saveMatchConfirmed,
   saveMatchUploaded,
   saveResultUploadEnabled,
 } from "./persistence";
@@ -133,5 +135,31 @@ describe("match uploaded persistence", () => {
     saveMatchUploaded(false);
 
     expect(loadMatchUploaded()).toBe(false);
+  });
+});
+
+describe("match confirmed persistence", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("defaults to unconfirmed", () => {
+    stubLocalStorage();
+
+    expect(loadMatchConfirmed()).toBe(false);
+  });
+
+  it("loads a stored confirmation", () => {
+    stubLocalStorage({ "darts-quadro-scorer:match-confirmed": "true" });
+
+    expect(loadMatchConfirmed()).toBe(true);
+  });
+
+  it("clears the confirmation for a new match", () => {
+    stubLocalStorage({ "darts-quadro-scorer:match-confirmed": "true" });
+
+    saveMatchConfirmed(false);
+
+    expect(loadMatchConfirmed()).toBe(false);
   });
 });

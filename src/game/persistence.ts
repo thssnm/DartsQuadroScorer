@@ -6,6 +6,7 @@ const BOARD_ID_KEY = "darts-quadro-scorer:board-id";
 const GIST_ID_KEY = "darts-quadro-scorer:gist-id";
 const RESULT_UPLOAD_ENABLED_KEY = "darts-quadro-scorer:result-upload-enabled";
 const MATCH_UPLOADED_KEY = "darts-quadro-scorer:match-uploaded";
+const MATCH_CONFIRMED_KEY = "darts-quadro-scorer:match-confirmed";
 
 export const DEFAULT_BOARD_ID = "Board 1";
 
@@ -111,6 +112,29 @@ export const loadResultUploadEnabled = (): boolean => {
 export const saveResultUploadEnabled = (enabled: boolean): void => {
   try {
     window.localStorage.setItem(RESULT_UPLOAD_ENABLED_KEY, enabled ? "true" : "false");
+  } catch {
+    // siehe oben
+  }
+};
+
+// Merkt sich, dass das Match-Ende-Popup mit "Weiter" bestätigt wurde.
+// Damit ist das Match endgültig abgeschlossen: nach einem Reload führt das
+// gespeicherte Match direkt zur Statistik, statt das Popup erneut zu
+// zeigen - sonst käme über dessen "Rückgängig" eine Korrektur zustande,
+// deren Ergebnis als zweite Datei im Gist landen würde. Anders als
+// [loadMatchUploaded] hängt das Flag am Klick, nicht am Upload-Erfolg:
+// bestätigt ist bestätigt, auch wenn Uploads abgeschaltet sind.
+export const loadMatchConfirmed = (): boolean => {
+  try {
+    return window.localStorage.getItem(MATCH_CONFIRMED_KEY) === "true";
+  } catch {
+    return false;
+  }
+};
+
+export const saveMatchConfirmed = (confirmed: boolean): void => {
+  try {
+    window.localStorage.setItem(MATCH_CONFIRMED_KEY, confirmed ? "true" : "false");
   } catch {
     // siehe oben
   }
