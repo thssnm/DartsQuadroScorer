@@ -912,10 +912,21 @@ body {
 
 /* Höhere Spezifität nötig, um background/border von
    .leg-overlay__card button zu überschreiben. */
-.leg-overlay__card .leg-overlay__undo {
+.leg-overlay__card .leg-overlay__undo,
+.leg-overlay__card .leg-overlay__secondary {
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text-dim);
+}
+
+.leg-overlay__card button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.leg-overlay__card .leg-overlay__detail {
+  font-size: 0.8rem;
+  opacity: 0.8;
 }
 
 .gist-status,
@@ -1049,6 +1060,14 @@ body {
   color: var(--text);
   font-size: 1.1rem;
   cursor: pointer;
+}
+
+/* Gesperrt, solange das Ergebnis des Uploads noch nicht feststeht - sonst
+   startet ein schneller Klick das nächste Match, bevor klar ist, ob das
+   Ergebnis angekommen ist. */
+.match-stats button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 @media (max-width: 700px) {

@@ -84,6 +84,19 @@ const fetchGist = async (config: GistConfig): Promise<GistResponse> => {
   return (await response.json()) as GistResponse;
 };
 
+// Antwort mit Fehlerstatus (401 Token, 404 Gist, 403 Limit, ...). Der Status
+// bleibt am Fehler hängen, damit der Upload-Ablauf ihn von einem reinen
+// Verbindungsabbruch unterscheiden kann.
+export class GistHttpError extends Error {
+  readonly status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "GistHttpError";
+    this.status = status;
+  }
+}
+
 const assertOk = async (response: Response): Promise<void> => {
   if (response.ok) return;
   let message = `GitHub Gist request failed (${response.status})`;
@@ -93,7 +106,7 @@ const assertOk = async (response: Response): Promise<void> => {
   } catch {
     // GitHub liefert normalerweise JSON; der Status reicht als Fallback.
   }
-  throw new Error(message);
+  throw new GistHttpError(response.status, message);
 };
 
 export const readPlayersFromGist = async (config: GistConfig): Promise<PlayersGistFile> => {

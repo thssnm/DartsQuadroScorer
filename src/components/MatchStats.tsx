@@ -7,6 +7,9 @@ interface MatchStatsProps {
   state: GameState;
   onNewMatch: () => void;
   gistStatus?: string | null;
+  // Gesperrt, solange der Upload läuft oder sein Fehler noch nicht
+  // quittiert wurde.
+  newMatchDisabled?: boolean;
 }
 
 const scoreInTurns = (turns: PlayerState["turns"]) =>
@@ -16,7 +19,12 @@ const legAverage = (turns: PlayerState["turns"]): number => {
   return darts > 0 ? (scoreInTurns(turns) / darts) * 3 : 0;
 };
 
-export const MatchStats = ({ state, onNewMatch, gistStatus }: MatchStatsProps) => {
+export const MatchStats = ({
+  state,
+  onNewMatch,
+  gistStatus,
+  newMatchDisabled = false,
+}: MatchStatsProps) => {
   const [p0, p1] = state.players;
   const winner = p0.legsWon > p1.legsWon ? p0 : p1;
   const stats0 = computePlayerStats(p0);
@@ -57,7 +65,9 @@ export const MatchStats = ({ state, onNewMatch, gistStatus }: MatchStatsProps) =
         })}
       </div>
 
-      <button onClick={onNewMatch}>Neues Match</button>
+      <button onClick={onNewMatch} disabled={newMatchDisabled}>
+        Neues Match
+      </button>
     </div>
   );
 };
