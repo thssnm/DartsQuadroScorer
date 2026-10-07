@@ -131,3 +131,4 @@ package-lock.json   src/assets/Love-for-Darts-Logo.svg   .env*
 - Remote: `thssnm/DartsQuadroScorer`. Kein Force-Push auf `main`.
 - Deployment über Vercel, per GitHub-Integration verbunden: **jeder Push auf `main` löst automatisch einen Deploy aus**, ein manueller Schritt entfällt. `VITE_GITHUB_TOKEN` ist dort als Projekt-Umgebungsvariable hinterlegt (siehe README).
 - Nach jedem abgeschlossenen Teilschritt committen. Kleine, nachvollziehbare Commits.
+- **Mit jedem Commit die `version` in der `package.json` hochzählen** (Standard: Patch, also 1.0.0 → 1.0.1). Die App zeigt diese Nummer unter dem Zahnrad an; sie ist am Board der einzige Hinweis darauf, welcher Stand läuft. Minor/Major nur auf Ansage.
