@@ -166,16 +166,22 @@ function App() {
   };
 
   const settingsButton = (
+    <button
+      type="button"
+      className="settings-btn"
+      onClick={() => setSettingsOpen(true)}
+      aria-label="Einstellungen öffnen"
+      title="Einstellungen"
+    >
+      ⚙
+    </button>
+  );
+
+  // Historie und Versionsnummer nur im Startbildschirm: während des Spiels
+  // soll die Ecke über dem Scoreboard so leer wie möglich bleiben.
+  const setupCornerButtons = (
     <>
-      <button
-        type="button"
-        className="settings-btn"
-        onClick={() => setSettingsOpen(true)}
-        aria-label="Einstellungen öffnen"
-        title="Einstellungen"
-      >
-        ⚙
-      </button>
+      {settingsButton}
       <button
         type="button"
         className="settings-btn"
@@ -239,7 +245,7 @@ function App() {
   if (state.phase === "setup") {
     return (
       <>
-        <div className="app__floating-settings">{settingsButton}</div>
+        <div className="app__floating-settings">{setupCornerButtons}</div>
         <SetupScreen
           resultUploadEnabled={resultUploadEnabled}
           gistConfig={loadGistConfig(gistId)}
