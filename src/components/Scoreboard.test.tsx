@@ -26,41 +26,43 @@ const stateWithTurns = (turns0: Turn[], turns1: Turn[]): GameState => {
   };
 };
 
-// Die Startzeile trägt ein geschütztes Leerzeichen, damit sie dieselbe Höhe
-// hat wie die "501"-Zeile der Score-Tabellen.
-const BLANK_ROW = "\u00a0";
+const render = (turns0: Turn[], turns1: Turn[]): string =>
+  renderToStaticMarkup(<Scoreboard state={stateWithTurns(turns0, turns1)} onEditTurn={vi.fn()} />);
 
-const dartsColumn = (markup: string): string[] => {
-  const afterDarts = markup.split('class="score-panel darts-panel"')[1] ?? "";
-  const panel = afterDarts.split('class="score-panel"')[0];
-  return [...panel.matchAll(/<strong>(.*?)<\/strong>/g)].map((m) => m[1]);
+// Der Tabellenkörper ist das Grid mit allen Zellen - der einzige Scroll-Container.
+const bodyCells = (markup: string): string[] => {
+  const body = markup.split('class="score-table__body"')[1] ?? "";
+  return [...body.matchAll(/<(?:div|button) class="score-table__row[^"]*"[^>]*>(.*?)<\/(?:div|button)>/g)].map(
+    (m) => m[1].replace(/<[^>]+>/g, "|")
+  );
 };
 
-describe("Scoreboard", () => {
-  it("renders the darts column between both score tables", () => {
-    const state = stateWithTurns([turn(60, 501)], []);
-    const markup = renderToStaticMarkup(<Scoreboard state={state} onEditTurn={vi.fn()} />);
+// Die Darts-Spalte ist jede dritte Zelle (p0 | Darts | p1).
+const dartsColumn = (markup: string): string[] =>
+  bodyCells(markup).filter((_, i) => i % 3 === 1);
 
-    const scorePanels = [...markup.matchAll(/class="score-panel(?: darts-panel)?"/g)];
-    expect(scorePanels).toHaveLength(3);
-    expect(scorePanels[1][0]).toContain("darts-panel");
+describe("Scoreboard", () => {
+  it("renders both players and the darts column in a single scroll container", () => {
+    const markup = render([turn(60, 501)], []);
+
+    expect([...markup.matchAll(/class="score-table__body"/g)]).toHaveLength(1);
+    expect(markup).not.toContain("score-panel__list");
   });
 
   it("counts three darts per row regardless of the finish dart rule", () => {
-    const state = stateWithTurns(
+    const markup = render(
       [turn(60, 501), turn(60, 441), turn(60, 381)],
       [turn(60, 501), turn(60, 441)]
     );
-    const markup = renderToStaticMarkup(<Scoreboard state={state} onEditTurn={vi.fn()} />);
 
     // Startzeile ohne Zahl (analog zur "501"-Zeile), danach 3er-Schritte.
-    expect(dartsColumn(markup)).toEqual([BLANK_ROW, "3", "6", "9"]);
+    expect(dartsColumn(markup)).toEqual(["| |", "|3|", "|6|", "|9|"]);
   });
 
-  it("uses the longer of both players' turn lists for the row count", () => {
-    const state = stateWithTurns([turn(60, 501)], [turn(60, 501), turn(60, 441)]);
-    const markup = renderToStaticMarkup(<Scoreboard state={state} onEditTurn={vi.fn()} />);
+  it("keeps an empty cell for the player who has not thrown in that round", () => {
+    const cells = bodyCells(render([turn(60, 501), turn(60, 441)], [turn(60, 501)]));
 
-    expect(dartsColumn(markup)).toEqual([BLANK_ROW, "3", "6"]);
+    // Zeile 2 (Index 6..8): Aufnahme von A, Darts, leere Zelle für B.
+    expect(cells.slice(6, 9)).toEqual(["|60||381|", "|6|", ""]);
   });
 });

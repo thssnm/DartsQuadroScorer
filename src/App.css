@@ -297,24 +297,24 @@ body {
   flex: 1 1 auto;
   min-height: 0;
   display: grid;
-  grid-template-columns: 1fr 1fr 56px 1fr 1fr;
+  grid-template-columns: 1fr 2fr 1fr;
   gap: 1px;
   background: var(--border);
   overflow: hidden;
 }
 
 .stats-panel,
-.score-panel {
+.score-table {
   background: var(--bg-panel);
-  padding: 6px 12px;
   min-height: 0;
 }
 
 .stats-panel {
   overflow-y: auto;
+  padding: 6px 12px;
 }
 
-.score-panel {
+.score-table {
   display: flex;
   flex-direction: column;
 }
@@ -344,63 +344,68 @@ body {
   line-height: 1.1;
 }
 
-.darts-panel {
-  padding-left: 4px;
-  padding-right: 4px;
+/* Spaltenbreiten von Kopf und Körper müssen identisch sein, sonst stehen die
+   Darts-Zahlen nicht über den Aufnahmen. */
+.score-table__header,
+.score-table__body {
+  display: grid;
+  grid-template-columns: 1fr 56px 1fr;
 }
 
-.darts-panel .score-panel__header {
+.score-table__header {
+  flex: 0 0 auto;
+  background: var(--red);
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+}
+
+.score-table__head-cell {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 16px;
+}
+
+.score-table__head-cell--darts {
   justify-content: center;
-  margin-left: -4px;
-  margin-right: -4px;
-  padding-left: 4px;
-  padding-right: 4px;
+  padding-left: 0;
+  padding-right: 0;
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
 }
 
-/* Die Scrollposition wird mitgeführt, der Scrollbalken wäre in der schmalen
-   Spalte aber störend und würde die Zahlen gegen die Score-Zeilen versetzen. */
-.darts-panel .score-panel__list {
-  scrollbar-width: none;
+/* Ein einziger Scroll-Container für beide Spieler und die Darts-Spalte.
+   Die beiden Trennlinien liegen als Hintergrund auf dem Container und
+   scrollen daher nicht mit - sie stehen immer über die volle Höhe. */
+.score-table__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  /* Platz für den Scrollbalken auf beiden Seiten reservieren: sonst sitzt die
+     Darts-Spalte nicht mehr mittig unter ihrer Kopfzeile, sobald die Tabelle
+     scrollt. */
+  scrollbar-gutter: stable both-edges;
+  align-content: start;
+  background:
+    linear-gradient(var(--border), var(--border)) calc(50% - 28px) 0 / 1px 100% no-repeat,
+    linear-gradient(var(--border), var(--border)) calc(50% + 28px) 0 / 1px 100% no-repeat;
 }
 
-.darts-panel .score-panel__list::-webkit-scrollbar {
-  display: none;
+.score-table__row {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 16px;
+  font-size: 1.3rem;
 }
 
-/* Gleiche Zeilenhöhe wie in den Score-Tabellen, damit die Zeilen beider
-   Seiten auf einer Linie liegen — nur Ausrichtung und Farbe weichen ab. */
-.darts-panel .score-panel__row {
+.score-table__row--darts {
   justify-content: center;
   padding-left: 0;
   padding-right: 0;
   color: var(--text-dim);
 }
 
-.score-panel__header {
-  flex: 0 0 auto;
-  display: flex;
-  justify-content: space-between;
-  background: var(--red);
-  padding: 8px 12px;
-  margin: -6px -12px 6px;
-  font-size: 0.9rem;
-}
-
-.score-panel__list {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-}
-
-.score-panel__row {
-  position: relative;
-  display: flex;
-  justify-content: space-between;
-  padding: 6px 4px;
-  font-size: 1.3rem;
-}
-
-.score-panel__row--editable {
+.score-table__row--editable {
   width: 100%;
   background: transparent;
   border: none;
@@ -411,12 +416,12 @@ body {
 }
 
 @media (hover: hover) {
-  .score-panel__row--editable:hover {
+  .score-table__row--editable:hover {
     background: var(--bg-box);
   }
 }
 
-.score-panel__row.near-checkout {
+.score-table__row.near-checkout {
   position: relative;
 }
 
@@ -1008,33 +1013,34 @@ body {
 }
 
 @media (max-width: 700px) {
-  /* Schmale Geräte: Stats-Panels nach oben, die beiden Score-Tabellen
-     nebeneinander, damit die Darts-Spalte zwischen ihnen stehen bleibt. */
+  /* Schmale Geräte: Stats-Panels nach oben, die Tabelle darunter über die
+     volle Breite. */
   .scoreboard__stats {
-    grid-template-columns: 1fr 48px 1fr;
+    grid-template-columns: 1fr 1fr;
     grid-template-areas:
-      "stats-left filler stats-right"
-      "score-left darts  score-right";
-  }
-  .scoreboard__stats::before {
-    content: "";
-    grid-area: filler;
-    background: var(--bg-panel);
+      "stats-left stats-right"
+      "table      table";
   }
   .scoreboard__stats > :nth-child(1) {
     grid-area: stats-left;
   }
   .scoreboard__stats > :nth-child(2) {
-    grid-area: score-left;
+    grid-area: table;
   }
   .scoreboard__stats > :nth-child(3) {
-    grid-area: darts;
-  }
-  .scoreboard__stats > :nth-child(4) {
-    grid-area: score-right;
-  }
-  .scoreboard__stats > :nth-child(5) {
     grid-area: stats-right;
+  }
+  .score-table__row {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  .score-table__head-cell {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  .score-table__head-cell--darts {
+    padding-left: 0;
+    padding-right: 0;
   }
   .score-box {
     font-size: 3rem;
