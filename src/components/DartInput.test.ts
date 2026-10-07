@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   canUseMultiplierControls,
-  canUseSlotControls,
   getActiveSlotIndex,
   getRunningInputUndoTarget,
 } from "./dartInputOrder";
@@ -34,14 +33,6 @@ describe("DartInput slot order", () => {
     expect(getActiveSlotIndex([slot(20), emptySlot(), emptySlot()])).toBe(1);
     expect(getActiveSlotIndex([slot(20), slot(19), emptySlot()])).toBe(2);
     expect(getActiveSlotIndex([slot(20), slot(19), slot(18)])).toBeNull();
-  });
-
-  it("keeps later empty slots locked until earlier slots are filled", () => {
-    const slots: [DartSlot, DartSlot, DartSlot] = [slot(20), emptySlot(), emptySlot()];
-
-    expect(canUseSlotControls(slots, 0)).toBe(true);
-    expect(canUseSlotControls(slots, 1)).toBe(true);
-    expect(canUseSlotControls(slots, 2)).toBe(false);
   });
 
   it("keeps all multiplier controls available before number entry", () => {

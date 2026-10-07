@@ -8,15 +8,6 @@ export const getActiveSlotIndex = (slots: [DartSlot, DartSlot, DartSlot]): numbe
   return nextOpen === -1 ? null : nextOpen;
 };
 
-export const canUseSlotControls = (
-  slots: [DartSlot, DartSlot, DartSlot],
-  index: number
-): boolean => {
-  const slot = slots[index];
-  if (!slot) return false;
-  return slot.segment !== null || getActiveSlotIndex(slots) === index;
-};
-
 export const canUseMultiplierControls = (
   slots: [DartSlot, DartSlot, DartSlot],
   index: number
