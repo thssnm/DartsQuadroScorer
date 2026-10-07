@@ -120,6 +120,7 @@ export const DartInput = ({
                 if (!canUseMultiplierControls(slots, i)) return;
                 onSetMultiplier(i, m);
               }}
+              onClear={() => onClearSlot(i)}
             />
           ))}
           <div className="dart-input__totals" aria-label="Aufnahme und Restscore">
@@ -182,20 +183,33 @@ interface DartColumnProps {
   slot: DartSlot;
   canUseMultipliers: boolean;
   onSetMultiplier: (m: Multiplier) => void;
+  onClear: () => void;
 }
 
 const DartColumn = ({
   slot,
   canUseMultipliers,
   onSetMultiplier,
+  onClear,
 }: DartColumnProps) => {
   const isBull = slot.segment === 25;
   const isMiss = slot.segment === 0;
   const canMultiply = !isMiss;
+  const isFilled = isSlotComplete(slot);
 
   return (
     <div className="dart-column">
-      <span className="dart-column__slot-value">{formatSlotValue(slot)}</span>
+      {/* Antippen leert den Slot zum Korrigieren. Danach ist er der am
+          weitesten links liegende leere Slot und bekommt die nächste Zahl -
+          darum braucht es hier keine eigene Merkliste für das Ziel. */}
+      <button
+        className="dart-column__slot-value"
+        onClick={onClear}
+        disabled={!isFilled}
+        aria-label={isFilled ? `Dart ${formatSlotValue(slot)} löschen` : "Kein Dart eingetragen"}
+      >
+        {formatSlotValue(slot)}
+      </button>
       <div className="dart-column__multipliers">
         {[2, 3, 4].map((m) => (
           <button
