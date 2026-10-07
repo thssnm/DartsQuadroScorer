@@ -1,13 +1,17 @@
 import { useEffect, useState } from "react";
 
+export interface Settings {
+  boardId: string;
+  gistId: string;
+  resultUploadEnabled: boolean;
+}
+
 interface SettingsModalProps {
   boardId: string;
   gistId: string;
   resultUploadEnabled: boolean;
-  onTestConnection: () => Promise<string>;
-  onBoardIdChange: (boardId: string) => void;
-  onGistIdChange: (gistId: string) => void;
-  onResultUploadEnabledChange: (enabled: boolean) => void;
+  onTestConnection: (gistId: string) => Promise<string>;
+  onSave: (settings: Settings) => void;
   onClose: () => void;
 }
 
@@ -16,11 +20,15 @@ export const SettingsModal = ({
   gistId,
   resultUploadEnabled,
   onTestConnection,
-  onBoardIdChange,
-  onGistIdChange,
-  onResultUploadEnabledChange,
+  onSave,
   onClose,
 }: SettingsModalProps) => {
+  // Die Eingaben werden erst mit "Speichern" übernommen. Vorher lagen sie
+  // bei jedem Tastendruck im localStorage - ein halb getippter Wert hätte
+  // die Gist-Anbindung mitten im Turnier unbrauchbar gemacht.
+  const [draftBoardId, setDraftBoardId] = useState(boardId);
+  const [draftGistId, setDraftGistId] = useState(gistId);
+  const [draftUploadEnabled, setDraftUploadEnabled] = useState(resultUploadEnabled);
   const [connectionStatus, setConnectionStatus] = useState<string | null>(null);
   const [testingConnection, setTestingConnection] = useState(false);
 
@@ -35,12 +43,22 @@ export const SettingsModal = ({
   const handleTestConnection = () => {
     setTestingConnection(true);
     setConnectionStatus(null);
-    void onTestConnection()
+    // Getestet wird die gerade eingetippte Gist-ID, nicht die gespeicherte.
+    void onTestConnection(draftGistId)
       .then(setConnectionStatus)
       .catch((error: unknown) =>
         setConnectionStatus(error instanceof Error ? error.message : "Verbindung fehlgeschlagen")
       )
       .finally(() => setTestingConnection(false));
+  };
+
+  const handleSave = () => {
+    onSave({
+      boardId: draftBoardId,
+      gistId: draftGistId,
+      resultUploadEnabled: draftUploadEnabled,
+    });
+    onClose();
   };
 
   return (
@@ -61,17 +79,21 @@ export const SettingsModal = ({
         <label className="settings-modal__field">
           <span>Board-Name</span>
           <input
-            value={boardId}
-            onChange={(event) => onBoardIdChange(event.target.value)}
+            value={draftBoardId}
+            onChange={(event) => setDraftBoardId(event.target.value)}
             placeholder="Board-Name eingeben"
             autoFocus
           />
         </label>
         <label className="settings-modal__field">
           <span>Gist-ID</span>
+          {/* Verdeckt, damit die ID am Board nicht abgelesen oder abfotografiert
+              werden kann - sonst ließen sich von fremden Geräten Ergebnisse in
+              denselben Gist schreiben. */}
           <input
-            value={gistId}
-            onChange={(event) => onGistIdChange(event.target.value)}
+            type="password"
+            value={draftGistId}
+            onChange={(event) => setDraftGistId(event.target.value)}
             placeholder="Gist-ID eingeben"
             autoComplete="off"
           />
@@ -88,11 +110,14 @@ export const SettingsModal = ({
         <label className="settings-modal__toggle">
           <input
             type="checkbox"
-            checked={resultUploadEnabled}
-            onChange={(event) => onResultUploadEnabledChange(event.target.checked)}
+            checked={draftUploadEnabled}
+            onChange={(event) => setDraftUploadEnabled(event.target.checked)}
           />
           <span>Ergebnis-Upload aktivieren</span>
         </label>
+        <button type="button" className="settings-modal__save" onClick={handleSave}>
+          Speichern
+        </button>
       </div>
     </div>
   );
