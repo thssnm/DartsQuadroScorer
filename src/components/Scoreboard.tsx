@@ -43,11 +43,27 @@ export const Scoreboard = ({ state, onEditTurn }: ScoreboardProps) => {
       <div className="scoreboard__stats">
         <StatsPanel stats={stats0} />
         <ScorePanel player={p0} playerIndex={0} onEditTurn={onEditTurn} />
+        <DartsPanel rowCount={Math.max(p0.turns.length, p1.turns.length)} />
         <ScorePanel player={p1} playerIndex={1} onEditTurn={onEditTurn} />
         <StatsPanel stats={stats1} />
       </div>
     </div>
   );
+};
+
+// Hält die Zeilenliste am unteren Ende, damit die zuletzt bestätigte Aufnahme
+// sichtbar bleibt. Score- und Darts-Spalte benutzen dieselbe Scrollposition,
+// sonst laufen die Zeilen der nebeneinander stehenden Spalten auseinander.
+const useScrolledToBottom = (rowCount: number) => {
+  const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+    list.scrollTop = list.scrollHeight;
+  }, [rowCount]);
+
+  return listRef;
 };
 
 const StatsPanel = ({ stats }: { stats: ReturnType<typeof computePlayerStats> }) => (
@@ -97,13 +113,7 @@ const ScorePanel = ({
     remainingAfter: t.scoreAfter,
     bust: t.bust,
   }));
-  const listRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const list = listRef.current;
-    if (!list) return;
-    list.scrollTop = list.scrollHeight;
-  }, [rows.length]);
+  const listRef = useScrolledToBottom(rows.length);
 
   return (
     <div className="score-panel">
@@ -130,6 +140,32 @@ const ScorePanel = ({
               </svg>
             )}
           </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Mittige Spalte zwischen beiden Score-Tabellen: laufende Summe der geworfenen
+// Darts im Leg. Bewusst schlicht drei Darts pro Aufnahme — die differenzierte
+// Finish-Dart-Zählregel (finalizedTurnDarts) gilt nur für Statistik und
+// Highlights und wird hier absichtlich nicht angewendet.
+const DartsPanel = ({ rowCount }: { rowCount: number }) => {
+  const listRef = useScrolledToBottom(rowCount);
+
+  return (
+    <div className="score-panel darts-panel">
+      <div className="score-panel__header">
+        <span>Darts</span>
+      </div>
+      <div className="score-panel__list" ref={listRef}>
+        <div className="score-panel__row">
+          <strong></strong>
+        </div>
+        {Array.from({ length: rowCount }, (_, i) => (
+          <div key={i} className="score-panel__row">
+            <strong>{(i + 1) * 3}</strong>
+          </div>
         ))}
       </div>
     </div>

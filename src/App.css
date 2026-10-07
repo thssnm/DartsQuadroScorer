@@ -280,7 +280,7 @@ body {
   flex: 1 1 auto;
   min-height: 0;
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr 56px 1fr 1fr;
   gap: 1px;
   background: var(--border);
   overflow: hidden;
@@ -325,6 +325,38 @@ body {
 .stat-box strong {
   font-size: 1.4rem;
   line-height: 1.1;
+}
+
+.darts-panel {
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+.darts-panel .score-panel__header {
+  justify-content: center;
+  margin-left: -4px;
+  margin-right: -4px;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+/* Die Scrollposition wird mitgeführt, der Scrollbalken wäre in der schmalen
+   Spalte aber störend und würde die Zahlen gegen die Score-Zeilen versetzen. */
+.darts-panel .score-panel__list {
+  scrollbar-width: none;
+}
+
+.darts-panel .score-panel__list::-webkit-scrollbar {
+  display: none;
+}
+
+/* Gleiche Zeilenhöhe wie in den Score-Tabellen, damit die Zeilen beider
+   Seiten auf einer Linie liegen — nur Ausrichtung und Farbe weichen ab. */
+.darts-panel .score-panel__row {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+  color: var(--text-dim);
 }
 
 .score-panel__header {
@@ -957,8 +989,33 @@ body {
 }
 
 @media (max-width: 700px) {
+  /* Schmale Geräte: Stats-Panels nach oben, die beiden Score-Tabellen
+     nebeneinander, damit die Darts-Spalte zwischen ihnen stehen bleibt. */
   .scoreboard__stats {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 48px 1fr;
+    grid-template-areas:
+      "stats-left filler stats-right"
+      "score-left darts  score-right";
+  }
+  .scoreboard__stats::before {
+    content: "";
+    grid-area: filler;
+    background: var(--bg-panel);
+  }
+  .scoreboard__stats > :nth-child(1) {
+    grid-area: stats-left;
+  }
+  .scoreboard__stats > :nth-child(2) {
+    grid-area: score-left;
+  }
+  .scoreboard__stats > :nth-child(3) {
+    grid-area: darts;
+  }
+  .scoreboard__stats > :nth-child(4) {
+    grid-area: score-right;
+  }
+  .scoreboard__stats > :nth-child(5) {
+    grid-area: stats-right;
   }
   .score-box {
     font-size: 3rem;
