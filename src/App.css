@@ -481,18 +481,30 @@ body {
 
 .dart-columns {
   display: flex;
-  --dart-mult-size: clamp(42px, 8vh, 54px);
+  /* Höhe der Multiplikator-Buttons und der Zeile insgesamt. */
+  --dart-mult-height: clamp(48px, 9vh, 62px);
+  /* Untergrenze für die Buttonbreite. Reicht der Platz nicht, scrollt die
+     Reihe waagerecht (overflow-x an .dart-input__throw-head). */
+  --dart-mult-min-width: 52px;
+  /* Breite der Summen-/Restscore-Spalte - unverändert, damit die zusätzliche
+     Breite der Dart-Sets nicht zu ihren Lasten geht. */
+  --dart-totals-width: clamp(126px, 24vh, 162px);
   gap: 16px;
   width: 100%;
 }
 
+/* Die drei Dart-Sets teilen sich den Platz, der neben Summen-Spalte und
+   Aktionen übrig bleibt - die Multiplikator-Buttons wachsen mit. */
 .dart-column {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(3, var(--dart-mult-size));
-  grid-template-rows: auto var(--dart-mult-size);
+  grid-template-columns: repeat(3, minmax(var(--dart-mult-min-width), 1fr));
+  grid-template-rows: auto var(--dart-mult-height);
+  /* Gleicher Spaltenabstand wie im Multiplikator-Grid darunter, damit die
+     Spalten beider Grids exakt übereinander liegen. */
+  column-gap: 4px;
   align-items: center;
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   border-radius: 8px;
   padding: 4px;
   outline: 2px solid transparent;
@@ -513,14 +525,14 @@ body {
 .dart-column__multipliers {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: repeat(3, var(--dart-mult-size));
-  grid-auto-rows: var(--dart-mult-size);
+  grid-template-columns: repeat(3, minmax(var(--dart-mult-min-width), 1fr));
+  grid-auto-rows: var(--dart-mult-height);
   gap: 4px;
 }
 
 .col-mult-btn {
-  width: var(--dart-mult-size);
-  height: var(--dart-mult-size);
+  width: 100%;
+  height: var(--dart-mult-height);
   padding: 0;
   background: var(--bg-box);
   border: 1px solid var(--border);
@@ -544,8 +556,9 @@ body {
 
 .dart-input__totals {
   display: grid;
-  grid-template-columns: repeat(3, var(--dart-mult-size));
-  grid-template-rows: auto var(--dart-mult-size);
+  width: var(--dart-totals-width);
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto var(--dart-mult-height);
   justify-items: center;
   flex: 0 0 auto;
   padding: 4px;
@@ -578,7 +591,7 @@ body {
 
 .dart-input__throw-actions {
   display: grid;
-  grid-template-rows: auto var(--dart-mult-size);
+  grid-template-rows: auto var(--dart-mult-height);
   flex: 0 0 auto;
   margin-left: auto;
   padding: 4px;
