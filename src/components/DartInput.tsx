@@ -123,7 +123,10 @@ export const DartInput = ({
             />
           ))}
           <div className="dart-input__totals" aria-label="Aufnahme und Restscore">
-            <strong>{runningTotal}</strong>
+            {/* Solange kein Dart eingegeben ist, bleibt die Summe leer statt "0" -
+                eine 0 liest sich am Board wie ein bereits geworfener Fehlwurf.
+                Das geschützte Leerzeichen hält die Zeilenhöhe. */}
+            <strong>{completedDarts.length === 0 ? "\u00a0" : runningTotal}</strong>
             <span className={finishSlotIndex === null ? "" : "checkout"}>{remaining - runningTotal}</span>
           </div>
           <div className="dart-input__throw-actions">
