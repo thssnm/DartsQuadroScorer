@@ -14,17 +14,22 @@ import {
   loadMatchConfirmed,
   saveMatchConfirmed,
   saveMatchUploaded,
+  loadMatchHistory,
+  saveCurrentMatchHistoryId,
+  type MatchHistoryEntry,
 } from "./game/persistence";
 import { SetupScreen } from "./components/SetupScreen";
 import { Scoreboard } from "./components/Scoreboard";
 import { DartInput } from "./components/DartInput";
 import { MatchStats } from "./components/MatchStats";
 import { SettingsModal, type Settings } from "./components/SettingsModal";
+import { MatchHistoryModal } from "./components/MatchHistoryModal";
 import { ResultOverlay } from "./components/ResultOverlay";
 import { UploadErrorPopup } from "./components/UploadErrorPopup";
 import { loadGistConfig } from "./gist/config";
 import { testGistConnection } from "./gist/api";
 import { describeUploadFailure } from "./gist/matchUpload";
+import { recordFinishedMatch, setMatchHistoryStatus, uploadHistoryEntry } from "./gist/matchHistory";
 import {
   IDLE_UPLOAD_STATE,
   isNewMatchLocked,
@@ -52,6 +57,11 @@ function App() {
   const [gistId, setGistId] = useState(() => loadGistId());
   const [resultUploadEnabled, setResultUploadEnabled] = useState(() => loadResultUploadEnabled());
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [history, setHistory] = useState<MatchHistoryEntry[]>([]);
+  // ID des Historie-Eintrags zum laufenden Match, um dessen Status nach dem
+  // Upload-Versuch nachzuziehen.
+  const historyEntryId = useRef<string | null>(null);
   const [gistStatus, setGistStatus] = useState<string | null>(null);
   // Zustand des Gist-Uploads für das bestätigte Match. "Neues Match" bleibt
   // gesperrt, solange er "pending" oder "failed" ist - erst ein Erfolg oder
@@ -86,6 +96,10 @@ function App() {
       // verfallen sie, damit das nächste Ergebnis wieder hochgeladen wird.
       saveMatchConfirmed(false);
       saveMatchUploaded(false);
+      // Der Eintrag selbst bleibt in der Historie, nur die Zuordnung zum
+      // laufenden Match verfällt.
+      saveCurrentMatchHistoryId(null);
+      historyEntryId.current = null;
     } else {
       saveGameState(state);
     }
@@ -109,8 +123,15 @@ function App() {
         setUploadState((previous) =>
           next.phase === "pending" ? { phase: "pending", failure: previous.failure } : next
         );
-        if (next.phase === "done") setGistStatus("Ergebnis in Gist hochgeladen.");
         if (next.phase === "failed") setGistStatus(null);
+        // "done" bei abgeschaltetem Upload heißt "übersprungen": weder eine
+        // Erfolgsmeldung noch ein Statuswechsel in der Historie.
+        if (next.phase === "done") {
+          setGistStatus(resultUploadEnabled ? "Ergebnis in Gist hochgeladen." : null);
+          if (resultUploadEnabled && historyEntryId.current) {
+            setMatchHistoryStatus(historyEntryId.current, "uploaded");
+          }
+        }
       }
     );
   }, [boardId, gistId, resultUploadEnabled, state]);
@@ -126,8 +147,12 @@ function App() {
 
     if (!changedToMatchConfirmed) return;
 
+    // Lokale Kopie des Ergebnisses - unabhängig vom Upload-Schalter und vom
+    // Ausgang des Uploads. Ein zweiter Durchlauf (Reload) legt keinen
+    // weiteren Eintrag an.
+    historyEntryId.current = recordFinishedMatch(state, boardId, resultUploadEnabled);
     runMatchUpload();
-  }, [matchConfirmed, runMatchUpload]);
+  }, [boardId, matchConfirmed, resultUploadEnabled, runMatchUpload, state]);
 
   // Die Einstellungen werden erst beim Klick auf "Speichern" übernommen,
   // nicht mehr bei jedem Tastendruck.
@@ -141,15 +166,30 @@ function App() {
   };
 
   const settingsButton = (
-    <button
-      type="button"
-      className="settings-btn"
-      onClick={() => setSettingsOpen(true)}
-      aria-label="Einstellungen öffnen"
-      title="Einstellungen"
-    >
-      ⚙
-    </button>
+    <>
+      <button
+        type="button"
+        className="settings-btn"
+        onClick={() => setSettingsOpen(true)}
+        aria-label="Einstellungen öffnen"
+        title="Einstellungen"
+      >
+        ⚙
+      </button>
+      <button
+        type="button"
+        className="settings-btn"
+        onClick={() => {
+          setHistory(loadMatchHistory());
+          setHistoryOpen(true);
+        }}
+        aria-label="Match-Historie öffnen"
+        title="Match-Historie"
+      >
+        ☰
+      </button>
+      <span className="app__version">v{__APP_VERSION__}</span>
+    </>
   );
 
   const settingsModal = settingsOpen ? (
@@ -172,6 +212,21 @@ function App() {
   // etwas passiert.
   const uploadPopupVisible =
     uploadPhase === "failed" || (uploadPhase === "pending" && uploadFailure !== null);
+  const historyModal = historyOpen ? (
+    <MatchHistoryModal
+      entries={history}
+      onClose={() => setHistoryOpen(false)}
+      onUpload={(entry) =>
+        uploadHistoryEntry(entry, loadGistConfig(gistId)).then((outcome) => {
+          // Status aus dem localStorage nachladen, damit die Liste genau das
+          // zeigt, was tatsächlich gespeichert wurde.
+          setHistory(loadMatchHistory());
+          return outcome.uploaded;
+        })
+      }
+    />
+  ) : null;
+
   const uploadErrorPopup = uploadPopupVisible ? (
     <UploadErrorPopup
       onRetry={runMatchUpload}
@@ -197,6 +252,7 @@ function App() {
           }}
         />
         {settingsModal}
+        {historyModal}
         {uploadErrorPopup}
       </>
     );
@@ -225,6 +281,7 @@ function App() {
           }}
         />
         {settingsModal}
+        {historyModal}
         {uploadErrorPopup}
       </>
     );
@@ -326,6 +383,7 @@ function App() {
         )}
       </div>
       {settingsModal}
+      {historyModal}
       {uploadErrorPopup}
     </>
   );

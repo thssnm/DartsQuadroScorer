@@ -7,6 +7,8 @@ const GIST_ID_KEY = "darts-quadro-scorer:gist-id";
 const RESULT_UPLOAD_ENABLED_KEY = "darts-quadro-scorer:result-upload-enabled";
 const MATCH_UPLOADED_KEY = "darts-quadro-scorer:match-uploaded";
 const MATCH_CONFIRMED_KEY = "darts-quadro-scorer:match-confirmed";
+const MATCH_HISTORY_KEY = "darts-quadro-scorer:match-history";
+const MATCH_HISTORY_ID_KEY = "darts-quadro-scorer:match-history-id";
 
 export const DEFAULT_BOARD_ID = "Board 1";
 
@@ -166,3 +168,86 @@ export const saveMatchUploaded = (uploaded: boolean): void => {
 // hinaus ist. match-finished zählt bewusst mit, damit die Statistik-Seite
 // nach einem Reload nicht verloren geht, bevor der Nutzer sie gesehen hat.
 export const isResumableState = (state: GameState): boolean => state.phase !== "setup";
+
+
+// ---------- Lokale Match-Historie ----------
+// Dauerhafte Liste aller beendeten Matches, unabhängig von [match-uploaded]
+// und [match-confirmed]: die beiden Merker gehören zum laufenden Match und
+// verfallen mit ihm, die Historie bleibt. Sie wird immer geschrieben, auch
+// wenn der Upload abgeschaltet ist oder fehlschlägt - damit ein Ergebnis am
+// Board nie nur im Gist existiert.
+
+export type MatchHistoryUploadStatus = "uploaded" | "not-uploaded" | "upload-disabled";
+
+// Dieselben Angaben, die auch ins Gist gehen, plus Status und eine lokale ID.
+export interface MatchHistoryEntry {
+  id: string;
+  boardName: string;
+  home: string;
+  guest: string;
+  legsHome: number;
+  legsGuest: number;
+  averageHome?: number;
+  averageGuest?: number;
+  highlights: string[];
+  updatedAt: string;
+  uploadStatus: MatchHistoryUploadStatus;
+}
+
+const isHistoryEntry = (value: unknown): value is MatchHistoryEntry =>
+  typeof value === "object" && value !== null && typeof (value as MatchHistoryEntry).id === "string";
+
+// Neueste zuerst - so steht das zuletzt gespielte Match oben in der Liste.
+export const loadMatchHistory = (): MatchHistoryEntry[] => {
+  try {
+    const raw = window.localStorage.getItem(MATCH_HISTORY_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed) ? parsed.filter(isHistoryEntry) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveMatchHistory = (entries: MatchHistoryEntry[]): void => {
+  try {
+    window.localStorage.setItem(MATCH_HISTORY_KEY, JSON.stringify(entries));
+  } catch {
+    // Wie bei saveGameState: ein voller oder gesperrter localStorage darf
+    // das laufende Spiel nicht stören.
+  }
+};
+
+export const appendMatchToHistory = (entry: MatchHistoryEntry): void => {
+  saveMatchHistory([entry, ...loadMatchHistory()]);
+};
+
+export const updateMatchHistoryStatus = (
+  id: string,
+  uploadStatus: MatchHistoryUploadStatus
+): void => {
+  const entries = loadMatchHistory();
+  if (!entries.some((entry) => entry.id === id)) return;
+  saveMatchHistory(entries.map((entry) => (entry.id === id ? { ...entry, uploadStatus } : entry)));
+};
+
+// ID des Historie-Eintrags, der zum laufenden Match gehört. Verhindert, dass
+// ein Reload nach dem Bestätigen einen zweiten Eintrag anlegt, und erlaubt
+// es, den Status desselben Eintrags nach einem Wiederholungsversuch zu
+// aktualisieren. Verfällt mit dem Match (Phase "setup").
+export const loadCurrentMatchHistoryId = (): string | null => {
+  try {
+    return window.localStorage.getItem(MATCH_HISTORY_ID_KEY);
+  } catch {
+    return null;
+  }
+};
+
+export const saveCurrentMatchHistoryId = (id: string | null): void => {
+  try {
+    if (id === null) window.localStorage.removeItem(MATCH_HISTORY_ID_KEY);
+    else window.localStorage.setItem(MATCH_HISTORY_ID_KEY, id);
+  } catch {
+    // siehe oben
+  }
+};
