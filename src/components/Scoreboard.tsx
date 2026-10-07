@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import type { GameState } from "../game/types";
+import { Fragment, useEffect, useRef } from "react";
+import type { GameState, PlayerState } from "../game/types";
 import { turnTotal } from "../game/types";
 import { computePlayerStats } from "../game/stats";
 import { isBoogeyNumber, isCheckoutRange, isWithinCheckoutThreshold } from "../game/checkout";
@@ -42,28 +42,11 @@ export const Scoreboard = ({ state, onEditTurn }: ScoreboardProps) => {
 
       <div className="scoreboard__stats">
         <StatsPanel stats={stats0} />
-        <ScorePanel player={p0} playerIndex={0} onEditTurn={onEditTurn} />
-        <DartsPanel rowCount={Math.max(p0.turns.length, p1.turns.length)} />
-        <ScorePanel player={p1} playerIndex={1} onEditTurn={onEditTurn} />
+        <ScoreTable players={state.players} onEditTurn={onEditTurn} />
         <StatsPanel stats={stats1} />
       </div>
     </div>
   );
-};
-
-// Hält die Zeilenliste am unteren Ende, damit die zuletzt bestätigte Aufnahme
-// sichtbar bleibt. Score- und Darts-Spalte benutzen dieselbe Scrollposition,
-// sonst laufen die Zeilen der nebeneinander stehenden Spalten auseinander.
-const useScrolledToBottom = (rowCount: number) => {
-  const listRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const list = listRef.current;
-    if (!list) return;
-    list.scrollTop = list.scrollHeight;
-  }, [rowCount]);
-
-  return listRef;
 };
 
 const StatsPanel = ({ stats }: { stats: ReturnType<typeof computePlayerStats> }) => (
@@ -97,80 +80,109 @@ const StatsPanel = ({ stats }: { stats: ReturnType<typeof computePlayerStats> })
   </div>
 );
 
-const ScorePanel = ({
-  player,
-  playerIndex,
+// Beide Punkte/Score-Spalten und die Darts-Spalte liegen in EINEM Grid und
+// damit in einem einzigen Scroll-Container. Getrennte Listen pro Spieler
+// ließen sich einzeln scrollen - die Zeilen beider Seiten standen dann nicht
+// mehr auf einer Höhe.
+const ScoreTable = ({
+  players,
   onEditTurn,
 }: {
-  player: GameState["players"][number];
-  playerIndex: 0 | 1;
+  players: GameState["players"];
   onEditTurn: (playerIndex: 0 | 1, turnIndex: number) => void;
 }) => {
-  // Rest-Score nach jeder Aufnahme berechnen, um die Zeilen aufzubauen.
-  // Bei Bust bleibt der Rest unverändert (turn.scoreAfter trägt das bereits korrekt).
-  const rows = player.turns.map((t) => ({
-    points: t.bust ? 0 : turnTotal(t.darts),
-    remainingAfter: t.scoreAfter,
-    bust: t.bust,
-  }));
-  const listRef = useScrolledToBottom(rows.length);
+  const [p0, p1] = players;
+  const rowCount = Math.max(p0.turns.length, p1.turns.length);
+  const bodyRef = useRef<HTMLDivElement>(null);
+
+  // Hält die Tabelle am unteren Ende, damit die zuletzt bestätigte Aufnahme
+  // sichtbar bleibt.
+  useEffect(() => {
+    const body = bodyRef.current;
+    if (!body) return;
+    body.scrollTop = body.scrollHeight;
+  }, [rowCount]);
 
   return (
-    <div className="score-panel">
-      <div className="score-panel__header">
-        <span>Punkte</span>
-        <span>Score</span>
-      </div>
-      <div className="score-panel__list" ref={listRef}>
-        <div className="score-panel__row">
-          <strong></strong>
-          <strong>501</strong>
+    <div className="score-table">
+      <div className="score-table__header">
+        <div className="score-table__head-cell">
+          <span>Punkte</span>
+          <span>Score</span>
         </div>
-        {rows.map((row, i) => (
-          <button
-            key={i}
-            className={`score-panel__row score-panel__row--editable ${isWithinCheckoutThreshold(row.remainingAfter) ? "near-checkout" : ""}`}
-            onClick={() => onEditTurn(playerIndex, i)}
-          >
-            <strong>{row.bust ? "BUST" : row.points}</strong>
-            <strong>{row.remainingAfter}</strong>
-            {isWithinCheckoutThreshold(row.remainingAfter) && (
-              <svg className="checkout-line" viewBox="0 0 100 100" preserveAspectRatio="none">
-                <line x1="6" y1="65" x2="94" y2="35" />
-              </svg>
-            )}
-          </button>
+        <div className="score-table__head-cell score-table__head-cell--darts">
+          <span>Darts</span>
+        </div>
+        <div className="score-table__head-cell">
+          <span>Punkte</span>
+          <span>Score</span>
+        </div>
+      </div>
+
+      <div className="score-table__body" ref={bodyRef}>
+        <StartRowCell />
+        {/* Startzeile der Darts-Spalte bleibt leer, das geschützte Leerzeichen
+            hält sie auf voller Zeilenhöhe. */}
+        <div className="score-table__row score-table__row--darts">
+          <strong>&nbsp;</strong>
+        </div>
+        <StartRowCell />
+
+        {Array.from({ length: rowCount }, (_, i) => (
+          <Fragment key={i}>
+            <TurnCell player={p0} playerIndex={0} turnIndex={i} onEditTurn={onEditTurn} />
+            {/* Bewusst schlicht drei Darts pro Aufnahme - die differenzierte
+                Finish-Dart-Zählregel gilt nur für Statistik und Highlights. */}
+            <div className="score-table__row score-table__row--darts">
+              <strong>{(i + 1) * 3}</strong>
+            </div>
+            <TurnCell player={p1} playerIndex={1} turnIndex={i} onEditTurn={onEditTurn} />
+          </Fragment>
         ))}
       </div>
     </div>
   );
 };
 
-// Mittige Spalte zwischen beiden Score-Tabellen: laufende Summe der geworfenen
-// Darts im Leg. Bewusst schlicht drei Darts pro Aufnahme — die differenzierte
-// Finish-Dart-Zählregel (finalizedTurnDarts) gilt nur für Statistik und
-// Highlights und wird hier absichtlich nicht angewendet.
-const DartsPanel = ({ rowCount }: { rowCount: number }) => {
-  const listRef = useScrolledToBottom(rowCount);
+const StartRowCell = () => (
+  <div className="score-table__row">
+    <strong></strong>
+    <strong>501</strong>
+  </div>
+);
+
+const TurnCell = ({
+  player,
+  playerIndex,
+  turnIndex,
+  onEditTurn,
+}: {
+  player: PlayerState;
+  playerIndex: 0 | 1;
+  turnIndex: number;
+  onEditTurn: (playerIndex: 0 | 1, turnIndex: number) => void;
+}) => {
+  const turn = player.turns[turnIndex];
+  // Der Spieler, der in dieser Runde noch nicht geworfen hat, bekommt eine
+  // leere Zelle - die Zeile muss trotzdem stehen, damit die Gegenseite und
+  // die Darts-Spalte auf ihrer Höhe bleiben.
+  if (!turn) return <div className="score-table__row" />;
+
+  // Bei Bust bleibt der Rest unverändert (turn.scoreAfter trägt das bereits korrekt).
+  const nearCheckout = isWithinCheckoutThreshold(turn.scoreAfter);
 
   return (
-    <div className="score-panel darts-panel">
-      <div className="score-panel__header">
-        <span>Darts</span>
-      </div>
-      <div className="score-panel__list" ref={listRef}>
-        {/* Startzeile, leer wie die "501"-Zeile gegenüber. Das Leerzeichen hält
-            sie auf voller Zeilenhöhe — sonst säßen alle Darts-Zahlen eine halbe
-            Zeile über den Aufnahmen. */}
-        <div className="score-panel__row">
-          <strong>&nbsp;</strong>
-        </div>
-        {Array.from({ length: rowCount }, (_, i) => (
-          <div key={i} className="score-panel__row">
-            <strong>{(i + 1) * 3}</strong>
-          </div>
-        ))}
-      </div>
-    </div>
+    <button
+      className={`score-table__row score-table__row--editable ${nearCheckout ? "near-checkout" : ""}`}
+      onClick={() => onEditTurn(playerIndex, turnIndex)}
+    >
+      <strong>{turn.bust ? "BUST" : turnTotal(turn.darts)}</strong>
+      <strong>{turn.scoreAfter}</strong>
+      {nearCheckout && (
+        <svg className="checkout-line" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <line x1="6" y1="65" x2="94" y2="35" />
+        </svg>
+      )}
+    </button>
   );
 };
