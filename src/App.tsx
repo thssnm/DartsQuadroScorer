@@ -24,16 +24,13 @@ import { ResultOverlay } from "./components/ResultOverlay";
 import { UploadErrorPopup } from "./components/UploadErrorPopup";
 import { loadGistConfig } from "./gist/config";
 import { testGistConnection } from "./gist/api";
+import { describeUploadFailure } from "./gist/matchUpload";
 import {
-  describeUploadFailure,
-  uploadMatchResultOnce,
-  type UploadFailure,
-} from "./gist/matchUpload";
-
-// idle: kein Upload für dieses Match offen. pending: Versuch läuft.
-// done: erfolgreich (oder nichts hochzuladen). failed: Fehler, Popup offen.
-// acknowledged: Fehler mit "Verstanden" quittiert.
-type UploadPhase = "idle" | "pending" | "done" | "failed" | "acknowledged";
+  IDLE_UPLOAD_STATE,
+  isNewMatchLocked,
+  runUploadFlow,
+  type UploadFlowState,
+} from "./gist/uploadFlow";
 import type { GameState } from "./game/types";
 import "./App.css";
 
@@ -61,10 +58,14 @@ function App() {
   // ein quittierter Fehler gibt den Button frei. Ein schon bestätigtes Match
   // startet nach einem Reload direkt in "pending", damit der Button nicht für
   // einen Frame klickbar ist.
-  const [uploadPhase, setUploadPhase] = useState<UploadPhase>(() =>
-    loadMatchConfirmed() && state.phase === "match-finished" ? "pending" : "idle"
+  const [uploadState, setUploadState] = useState<UploadFlowState>(() =>
+    loadMatchConfirmed() && state.phase === "match-finished"
+      ? { phase: "pending", failure: null }
+      : IDLE_UPLOAD_STATE
   );
-  const [uploadFailure, setUploadFailure] = useState<UploadFailure | null>(null);
+  const { phase: uploadPhase, failure: uploadFailure } = uploadState;
+  // Der Button hängt am Zustand des Upload-Promise, nicht an einer Dauer.
+  const newMatchLocked = isNewMatchLocked(uploadState);
   const matchFinished = state.phase === "match-finished";
   // Das Match gilt erst als abgeschlossen, wenn der Nutzer das Match-Ende-
   // Popup mit "Weiter" bestätigt hat - vorher kann er es noch zurücknehmen.
@@ -94,24 +95,24 @@ function App() {
   // automatische nach dem Bestätigen als auch jeder Klick auf "Upload erneut
   // versuchen". Wiederholt wird nur der Request, der Match-Zustand bleibt.
   const runMatchUpload = useCallback(() => {
-    setUploadPhase("pending");
     setGistStatus("Ergebnis wird hochgeladen …");
-    void uploadMatchResultOnce({
-      enabled: resultUploadEnabled,
-      config: loadGistConfig(gistId),
-      boardId,
-      state,
-    }).then((outcome) => {
-      if (outcome.result === "failed") {
-        setUploadFailure(outcome.failure ?? null);
-        setGistStatus(null);
-        setUploadPhase("failed");
-        return;
+    void runUploadFlow(
+      {
+        enabled: resultUploadEnabled,
+        config: loadGistConfig(gistId),
+        boardId,
+        state,
+      },
+      (next) => {
+        // Beim Wiederholen bleibt der bekannte Fehler stehen, damit das
+        // Popup während des neuen Versuchs nicht kurz verschwindet.
+        setUploadState((previous) =>
+          next.phase === "pending" ? { phase: "pending", failure: previous.failure } : next
+        );
+        if (next.phase === "done") setGistStatus("Ergebnis in Gist hochgeladen.");
+        if (next.phase === "failed") setGistStatus(null);
       }
-      setUploadFailure(null);
-      setGistStatus(outcome.result === "skipped" ? null : "Ergebnis in Gist hochgeladen.");
-      setUploadPhase("done");
-    });
+    );
   }, [boardId, gistId, resultUploadEnabled, state]);
 
   // Hochgeladen wird erst nach dem Bestätigen des Match-Ende-Popups: ein
@@ -174,7 +175,7 @@ function App() {
   const uploadErrorPopup = uploadPopupVisible ? (
     <UploadErrorPopup
       onRetry={runMatchUpload}
-      onConfirm={() => setUploadPhase("acknowledged")}
+      onConfirm={() => setUploadState({ phase: "acknowledged", failure: null })}
       retrying={uploadPhase === "pending"}
       detail={uploadFailure ? describeUploadFailure(uploadFailure) : null}
     />
@@ -190,8 +191,7 @@ function App() {
           onStart={(nameA, nameB, legsToWin) => {
             setShowMatchStats(false);
             setGistStatus(null);
-            setUploadFailure(null);
-            setUploadPhase("idle");
+            setUploadState(IDLE_UPLOAD_STATE);
             dispatch({ type: "RESET_MATCH", nameA, nameB, legsToWin });
             dispatch({ type: "START_MATCH" });
           }}
@@ -209,12 +209,13 @@ function App() {
         <MatchStats
           state={state}
           gistStatus={gistStatus}
-          newMatchDisabled={uploadPhase === "pending" || uploadPhase === "failed"}
+          newMatchDisabled={newMatchLocked}
           onNewMatch={() => {
+            // Zweite Absicherung neben disabled und dem Guard in MatchStats.
+            if (newMatchLocked) return;
             setShowMatchStats(false);
             setGistStatus(null);
-            setUploadFailure(null);
-            setUploadPhase("idle");
+            setUploadState(IDLE_UPLOAD_STATE);
             dispatch({
               type: "RESET_MATCH",
               nameA: state.players[0].name,

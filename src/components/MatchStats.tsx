@@ -32,6 +32,13 @@ export const MatchStats = ({
 
   const legCount = Math.max(p0.legHistory.length, p1.legHistory.length);
 
+  // Zweite Absicherung neben dem disabled-Attribut: solange der Upload nicht
+  // aufgelöst ist, darf auch ein durchkommender Klick nichts auslösen.
+  const handleNewMatch = () => {
+    if (newMatchDisabled) return;
+    onNewMatch();
+  };
+
   return (
     <div className="match-stats">
       <h1>{winner.name} gewinnt das Match!</h1>
@@ -65,7 +72,7 @@ export const MatchStats = ({
         })}
       </div>
 
-      <button onClick={onNewMatch} disabled={newMatchDisabled}>
+      <button onClick={handleNewMatch} disabled={newMatchDisabled}>
         Neues Match
       </button>
     </div>
