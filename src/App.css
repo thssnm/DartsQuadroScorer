@@ -514,12 +514,25 @@ body {
 .dart-column__slot-value {
   grid-column: 1;
   display: block;
+  width: 100%;
   min-height: 1.35em;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
   color: var(--text);
+  font-family: inherit;
   font-size: 1.45rem;
   font-weight: bold;
   line-height: 1.1;
   text-align: center;
+  cursor: pointer;
+}
+
+/* Leerer Slot: nichts zu löschen - der Button bleibt sichtbar wie bisher
+   (er zeigt den Platzhalter "-"), ist aber nicht bedienbar. */
+.dart-column__slot-value:disabled {
+  cursor: default;
 }
 
 .dart-column__multipliers {
