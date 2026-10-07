@@ -11,6 +11,18 @@
 
 * {
   box-sizing: border-box;
+  /* Android/Chrome legt beim Antippen ein eigenes Highlight über das Element,
+     bevor der tatsächliche Zustand (aktiv, Multiplikator gesetzt, ...) greift.
+     Am Board ist das sichtbar irritierend. */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Langes Antippen markiert sonst die Beschriftung (blau hinterlegter Text).
+   Gilt bewusst nur für Schaltflächen und Links, nicht für Eingabefelder. */
+button,
+a {
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 body {
@@ -58,10 +70,12 @@ body {
   font-size: 1rem;
 }
 
-.abort-btn:hover,
-.settings-btn:hover {
-  border-color: var(--red-bright);
-  color: var(--text);
+@media (hover: hover) {
+  .abort-btn:hover,
+  .settings-btn:hover {
+    border-color: var(--red-bright);
+    color: var(--text);
+  }
 }
 
 /* ---------- Setup ---------- */
@@ -93,15 +107,18 @@ body {
   text-decoration: none;
 }
 
-.setup-sponsor:hover,
 .setup-sponsor:focus-visible {
   border-color: var(--red-bright);
   color: var(--text);
-}
-
-.setup-sponsor:focus-visible {
   outline: 2px solid var(--red-bright);
   outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .setup-sponsor:hover {
+    border-color: var(--red-bright);
+    color: var(--text);
+  }
 }
 
 .setup-sponsor span {
@@ -393,8 +410,10 @@ body {
   border-radius: 4px;
 }
 
-.score-panel__row--editable:hover {
-  background: var(--bg-box);
+@media (hover: hover) {
+  .score-panel__row--editable:hover {
+    background: var(--bg-box);
+  }
 }
 
 .score-panel__row.near-checkout {
