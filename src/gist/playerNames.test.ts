@@ -24,6 +24,24 @@ describe("loadSetupPlayerNames", () => {
     ).resolves.toEqual(["Alice", "Bob"]);
   });
 
+  it("sorts the player names alphabetically", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          files: {
+            "players.json": { content: JSON.stringify({ players: ["Chris", "Alice", "Bob"] }) },
+          },
+        }),
+        { status: 200 }
+      )
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      loadSetupPlayerNames(true, { token: "token", gistId: "gist-id" })
+    ).resolves.toEqual(["Alice", "Bob", "Chris"]);
+  });
+
   it("stays empty and does not fetch when result uploads are disabled", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
