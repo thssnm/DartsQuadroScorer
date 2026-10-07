@@ -159,8 +159,11 @@ const DartsPanel = ({ rowCount }: { rowCount: number }) => {
         <span>Darts</span>
       </div>
       <div className="score-panel__list" ref={listRef}>
+        {/* Startzeile, leer wie die "501"-Zeile gegenüber. Das Leerzeichen hält
+            sie auf voller Zeilenhöhe — sonst säßen alle Darts-Zahlen eine halbe
+            Zeile über den Aufnahmen. */}
         <div className="score-panel__row">
-          <strong></strong>
+          <strong>&nbsp;</strong>
         </div>
         {Array.from({ length: rowCount }, (_, i) => (
           <div key={i} className="score-panel__row">
