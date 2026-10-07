@@ -26,10 +26,14 @@ const stateWithTurns = (turns0: Turn[], turns1: Turn[]): GameState => {
   };
 };
 
+// Die Startzeile trägt ein geschütztes Leerzeichen, damit sie dieselbe Höhe
+// hat wie die "501"-Zeile der Score-Tabellen.
+const BLANK_ROW = "\u00a0";
+
 const dartsColumn = (markup: string): string[] => {
   const afterDarts = markup.split('class="score-panel darts-panel"')[1] ?? "";
   const panel = afterDarts.split('class="score-panel"')[0];
-  return [...panel.matchAll(/<strong>(\d*)<\/strong>/g)].map((m) => m[1]);
+  return [...panel.matchAll(/<strong>(.*?)<\/strong>/g)].map((m) => m[1]);
 };
 
 describe("Scoreboard", () => {
@@ -49,14 +53,14 @@ describe("Scoreboard", () => {
     );
     const markup = renderToStaticMarkup(<Scoreboard state={state} onEditTurn={vi.fn()} />);
 
-    // Erste Zeile ist leer (Startzeile analog zu "501"), danach 3er-Schritte.
-    expect(dartsColumn(markup)).toEqual(["", "3", "6", "9"]);
+    // Startzeile ohne Zahl (analog zur "501"-Zeile), danach 3er-Schritte.
+    expect(dartsColumn(markup)).toEqual([BLANK_ROW, "3", "6", "9"]);
   });
 
   it("uses the longer of both players' turn lists for the row count", () => {
     const state = stateWithTurns([turn(60, 501)], [turn(60, 501), turn(60, 441)]);
     const markup = renderToStaticMarkup(<Scoreboard state={state} onEditTurn={vi.fn()} />);
 
-    expect(dartsColumn(markup)).toEqual(["", "3", "6"]);
+    expect(dartsColumn(markup)).toEqual([BLANK_ROW, "3", "6"]);
   });
 });
