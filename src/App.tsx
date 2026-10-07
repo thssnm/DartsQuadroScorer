@@ -19,7 +19,7 @@ import { SetupScreen } from "./components/SetupScreen";
 import { Scoreboard } from "./components/Scoreboard";
 import { DartInput } from "./components/DartInput";
 import { MatchStats } from "./components/MatchStats";
-import { SettingsModal } from "./components/SettingsModal";
+import { SettingsModal, type Settings } from "./components/SettingsModal";
 import { ResultOverlay } from "./components/ResultOverlay";
 import { UploadErrorPopup } from "./components/UploadErrorPopup";
 import { loadGistConfig } from "./gist/config";
@@ -95,19 +95,15 @@ function App() {
     });
   }, [boardId, gistId, matchConfirmed, resultUploadEnabled, state]);
 
-  const updateBoardId = (nextBoardId: string) => {
-    setBoardId(nextBoardId);
-    saveBoardId(nextBoardId);
-  };
-
-  const updateGistId = (nextGistId: string) => {
-    setGistId(nextGistId);
-    saveGistId(nextGistId);
-  };
-
-  const updateResultUploadEnabled = (enabled: boolean) => {
-    setResultUploadEnabled(enabled);
-    saveResultUploadEnabled(enabled);
+  // Die Einstellungen werden erst beim Klick auf "Speichern" übernommen,
+  // nicht mehr bei jedem Tastendruck.
+  const saveSettings = (settings: Settings) => {
+    setBoardId(settings.boardId);
+    saveBoardId(settings.boardId);
+    setGistId(settings.gistId);
+    saveGistId(settings.gistId);
+    setResultUploadEnabled(settings.resultUploadEnabled);
+    saveResultUploadEnabled(settings.resultUploadEnabled);
   };
 
   const settingsButton = (
@@ -127,11 +123,9 @@ function App() {
       boardId={boardId}
       gistId={gistId}
       resultUploadEnabled={resultUploadEnabled}
-      onBoardIdChange={updateBoardId}
-      onGistIdChange={updateGistId}
-      onResultUploadEnabledChange={updateResultUploadEnabled}
-      onTestConnection={() =>
-        testGistConnection(loadGistConfig(gistId)).then((result) =>
+      onSave={saveSettings}
+      onTestConnection={(testGistId) =>
+        testGistConnection(loadGistConfig(testGistId)).then((result) =>
           result.ok ? `✓ ${result.message}` : `Verbindung fehlgeschlagen: ${result.message}`
         )
       }
