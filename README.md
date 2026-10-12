@@ -17,6 +17,9 @@ Die `.env` nicht committen. Beim Vercel-Deploy denselben Wert als
 Projekt-Umgebungsvariable in den Vercel-Projekteinstellungen hinterlegen. Die
 Gist-ID wird in den App-Einstellungen am Board eingetragen.
 
+Optional lässt sich mit `VITE_POCKETBASE_URL` ein anderer Server für das
+API-Ziel setzen (Default: `https://api.thssn.dev`).
+
 ```bash
 npm install
 npm run dev
@@ -55,6 +58,25 @@ installieren, statt jedes Mal `npm run dev` zu starten.
   Bust nach Double-Out-Regeln (Rest < 0, Rest = 1, oder Rest = 0 ohne
   Double als letzten Dart).
 - **Rücktaste:** Letzten eingegebenen Dart der aktuellen Aufnahme löschen.
+
+## Ergebnis-Upload (Gist und API)
+
+Ein bestätigtes Match ("Weiter zur Statistik") wird parallel an zwei Ziele
+geschickt, wenn in den Einstellungen "Ergebnis-Upload aktivieren" an ist:
+
+- **Gist:** wie bisher, für das Dashboard.
+- **API (PocketBase):** zusätzlich, nur wenn das Board im Bereich "API" der
+  Einstellungen angemeldet ist (E-Mail + Passwort, gespeichert wird nur das
+  Token). Ohne Anmeldung wird die API still übersprungen.
+
+"Neues Match" bleibt gesperrt, bis beide Ziele fertig sind. Schlägt ein Ziel
+fehl, erscheint das Fehler-Popup; "Upload erneut versuchen" wiederholt nur das
+fehlgeschlagene Ziel. Ein fehlgeschlagener Upload wird beim nächsten Start
+der App erneut versucht.
+
+In der Match-Historie (☰) steht pro Match der Status für Gist und API; beide
+lassen sich dort nachträglich hochladen ("Upload" bzw. "Upload zur API").
+Die Spieler-Auswahl im Setup lädt Namen aus beiden Quellen.
 
 ## Spielregeln (implementiert)
 
