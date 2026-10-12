@@ -11,6 +11,12 @@ interface SettingsModalProps {
   gistId: string;
   resultUploadEnabled: boolean;
   onTestConnection: (gistId: string) => Promise<string>;
+  // E-Mail der API-Anmeldung, null = nicht angemeldet.
+  apiEmail: string | null;
+  // Liefert die Meldung für den Nutzer; ok = Anmeldung gespeichert.
+  onApiLogin: (email: string, password: string) => Promise<{ ok: boolean; message: string }>;
+  onApiLogout: () => void;
+  onApiTest: () => Promise<string>;
   onSave: (settings: Settings) => void;
   onClose: () => void;
 }
@@ -20,6 +26,10 @@ export const SettingsModal = ({
   gistId,
   resultUploadEnabled,
   onTestConnection,
+  apiEmail,
+  onApiLogin,
+  onApiLogout,
+  onApiTest,
   onSave,
   onClose,
 }: SettingsModalProps) => {
@@ -31,6 +41,10 @@ export const SettingsModal = ({
   const [draftUploadEnabled, setDraftUploadEnabled] = useState(resultUploadEnabled);
   const [connectionStatus, setConnectionStatus] = useState<string | null>(null);
   const [testingConnection, setTestingConnection] = useState(false);
+  const [loginEmail, setLoginEmail] = useState(apiEmail ?? "");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [apiStatus, setApiStatus] = useState<string | null>(null);
+  const [apiBusy, setApiBusy] = useState(false);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -50,6 +64,30 @@ export const SettingsModal = ({
         setConnectionStatus(error instanceof Error ? error.message : "Verbindung fehlgeschlagen")
       )
       .finally(() => setTestingConnection(false));
+  };
+
+  // Die Anmeldung wirkt sofort, unabhängig von "Speichern".
+  const handleApiLogin = () => {
+    setApiBusy(true);
+    setApiStatus(null);
+    void onApiLogin(loginEmail, loginPassword)
+      .then((result) => {
+        setApiStatus(result.ok ? null : result.message);
+        // Das Passwort bleibt nicht einmal im Formular stehen.
+        if (result.ok) setLoginPassword("");
+      })
+      .finally(() => setApiBusy(false));
+  };
+
+  const handleApiTest = () => {
+    setApiBusy(true);
+    setApiStatus(null);
+    void onApiTest()
+      .then(setApiStatus)
+      .catch((error: unknown) =>
+        setApiStatus(error instanceof Error ? error.message : "Verbindung fehlgeschlagen")
+      )
+      .finally(() => setApiBusy(false));
   };
 
   const handleSave = () => {
@@ -115,6 +153,56 @@ export const SettingsModal = ({
           />
           <span>Ergebnis-Upload aktivieren</span>
         </label>
+        <h3 className="settings-modal__section">API</h3>
+        {apiEmail !== null ? (
+          <>
+            <p className="settings-modal__status">Angemeldet als {apiEmail}</p>
+            <button type="button" className="settings-modal__test" onClick={handleApiTest} disabled={apiBusy}>
+              {apiBusy ? "Verbindung wird getestet …" : "API-Verbindung testen"}
+            </button>
+            <button
+              type="button"
+              className="settings-modal__test"
+              onClick={() => {
+                setApiStatus(null);
+                onApiLogout();
+              }}
+              disabled={apiBusy}
+            >
+              Abmelden
+            </button>
+          </>
+        ) : (
+          <>
+            <label className="settings-modal__field">
+              <span>E-Mail</span>
+              <input
+                type="email"
+                value={loginEmail}
+                onChange={(event) => setLoginEmail(event.target.value)}
+                autoComplete="username"
+              />
+            </label>
+            <label className="settings-modal__field">
+              <span>Passwort</span>
+              <input
+                type="password"
+                value={loginPassword}
+                onChange={(event) => setLoginPassword(event.target.value)}
+                autoComplete="current-password"
+              />
+            </label>
+            <button
+              type="button"
+              className="settings-modal__test"
+              onClick={handleApiLogin}
+              disabled={apiBusy || !loginEmail.trim() || !loginPassword}
+            >
+              {apiBusy ? "Anmeldung läuft …" : "Anmelden"}
+            </button>
+          </>
+        )}
+        {apiStatus && <p className="settings-modal__status">{apiStatus}</p>}
         <button type="button" className="settings-modal__save" onClick={handleSave}>
           Speichern
         </button>

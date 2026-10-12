@@ -862,6 +862,13 @@ body {
   accent-color: var(--red-bright);
 }
 
+.settings-modal__section {
+  margin: 24px 0 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  font-size: 1rem;
+}
+
 .settings-modal__save {
   width: 100%;
   margin-top: 20px;
@@ -944,11 +951,16 @@ body {
   color: #e0a020;
 }
 
+.match-history__status--not-logged-in {
+  color: #e0a020;
+}
+
 .match-history__status--upload-disabled {
   color: var(--text-dim);
 }
 
-.match-history__upload {
+.match-history__upload,
+.match-history__api-upload {
   padding: 8px 18px;
   background: var(--red);
   border: none;
@@ -958,7 +970,8 @@ body {
   cursor: pointer;
 }
 
-.match-history__upload:disabled {
+.match-history__upload:disabled,
+.match-history__api-upload:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
