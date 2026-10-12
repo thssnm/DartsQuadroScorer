@@ -18,14 +18,23 @@ const entry = (overrides: Partial<MatchHistoryEntry> = {}): MatchHistoryEntry =>
   ...overrides,
 });
 
-const render = (entries: MatchHistoryEntry[]): string =>
+const render = (entries: MatchHistoryEntry[], apiLoggedIn = false): string =>
   renderToStaticMarkup(
-    <MatchHistoryModal entries={entries} onUpload={vi.fn()} onClose={vi.fn()} />
+    <MatchHistoryModal
+      entries={entries}
+      onUpload={vi.fn()}
+      onApiUpload={vi.fn()}
+      apiLoggedIn={apiLoggedIn}
+      onClose={vi.fn()}
+    />
   );
 
 // Der Upload-Button eines Eintrags, so wie er im Markup steht.
 const uploadButtons = (markup: string): string[] =>
   [...markup.matchAll(/<button[^>]*match-history__upload[^>]*>.*?<\/button>/g)].map((m) => m[0]);
+
+const apiUploadButtons = (markup: string): string[] =>
+  [...markup.matchAll(/<button[^>]*match-history__api-upload[^>]*>.*?<\/button>/g)].map((m) => m[0]);
 
 describe("MatchHistoryModal", () => {
   it("shows every detail that would go into the gist", () => {
@@ -74,5 +83,33 @@ describe("MatchHistoryModal", () => {
 
   it("stays usable without any finished match", () => {
     expect(render([])).toContain("Noch kein Match beendet.");
+  });
+
+  it("shows gist and API status separately", () => {
+    const markup = render([entry({ uploadStatus: "uploaded", apiUploadStatus: "not-logged-in" })], true);
+
+    expect(markup).toContain("Gist: Erfolgreich hochgeladen");
+    expect(markup).toContain("API: Nicht angemeldet");
+    expect(render([entry({ apiUploadStatus: "upload-disabled" })])).toContain(
+      "API: Nicht übertragen (Upload deaktiviert)"
+    );
+    // Einträge aus der Zeit vor dem API-Ziel.
+    expect(render([entry()])).toContain("API: Nicht hochgeladen");
+  });
+
+  it("offers the API upload until the result is in the API", () => {
+    expect(apiUploadButtons(render([entry({ apiUploadStatus: "not-uploaded" })], true))).toHaveLength(1);
+    expect(apiUploadButtons(render([entry({ apiUploadStatus: "uploaded" })], true))).toHaveLength(0);
+    expect(render([entry({ apiUploadStatus: "uploaded" })], true)).toContain("API: Erfolgreich hochgeladen");
+  });
+
+  it("disables the API upload without a login and says where to log in", () => {
+    const markup = render([entry({ apiUploadStatus: "not-uploaded" })], false);
+    const [button] = apiUploadButtons(markup);
+
+    expect(button).toContain("Upload zur API");
+    expect(button).toContain("disabled");
+    expect(markup).toContain("In den Einstellungen anmelden");
+    expect(apiUploadButtons(render([entry()], true))[0]).not.toContain("disabled");
   });
 });

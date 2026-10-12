@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import loveForDartsLogo from "../assets/Love-for-Darts-Logo.svg";
 import type { GistConfig } from "../gist/config";
-import { loadSetupPlayerNames } from "../gist/playerNames";
+import { loadAllSetupPlayerNames } from "../api/playerNames";
 
 interface SetupScreenProps {
   onStart: (nameA: string, nameB: string, legsToWin: number) => void;
@@ -54,7 +54,7 @@ export const SetupScreen = ({ onStart, resultUploadEnabled, gistConfig }: SetupS
   useEffect(() => {
     let ignore = false;
     const lookup = initialPlayerLookup.current;
-    void loadSetupPlayerNames(lookup.resultUploadEnabled, lookup.gistConfig).then((players) => {
+    void loadAllSetupPlayerNames(lookup.resultUploadEnabled, lookup.gistConfig).then((players) => {
       if (!ignore) setPlayerNames(players);
     });
 

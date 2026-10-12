@@ -9,6 +9,9 @@ const MATCH_UPLOADED_KEY = "darts-quadro-scorer:match-uploaded";
 const MATCH_CONFIRMED_KEY = "darts-quadro-scorer:match-confirmed";
 const MATCH_HISTORY_KEY = "darts-quadro-scorer:match-history";
 const MATCH_HISTORY_ID_KEY = "darts-quadro-scorer:match-history-id";
+const API_TOKEN_KEY = "darts-quadro-scorer:api-token";
+const API_EMAIL_KEY = "darts-quadro-scorer:api-email";
+const MATCH_UPLOADED_API_KEY = "darts-quadro-scorer:match-uploaded-api";
 
 export const DEFAULT_BOARD_ID = "Board 1";
 
@@ -164,6 +167,59 @@ export const saveMatchUploaded = (uploaded: boolean): void => {
   }
 };
 
+// Gegenstück zu [loadMatchUploaded] für das API-Ziel. Eigener Merker, weil
+// Gist und API unabhängig voneinander gelingen oder scheitern können.
+export const loadMatchUploadedApi = (): boolean => {
+  try {
+    return window.localStorage.getItem(MATCH_UPLOADED_API_KEY) === "true";
+  } catch {
+    return false;
+  }
+};
+
+export const saveMatchUploadedApi = (uploaded: boolean): void => {
+  try {
+    window.localStorage.setItem(MATCH_UPLOADED_API_KEY, uploaded ? "true" : "false");
+  } catch {
+    // siehe oben
+  }
+};
+
+// Anmeldung an der API: nur Token und E-Mail, das Passwort wird nie
+// gespeichert.
+export interface ApiAuth {
+  token: string;
+  email: string;
+}
+
+export const loadApiAuth = (): ApiAuth | null => {
+  try {
+    const token = window.localStorage.getItem(API_TOKEN_KEY);
+    if (!token) return null;
+    return { token, email: window.localStorage.getItem(API_EMAIL_KEY) ?? "" };
+  } catch {
+    return null;
+  }
+};
+
+export const saveApiAuth = (auth: ApiAuth): void => {
+  try {
+    window.localStorage.setItem(API_TOKEN_KEY, auth.token);
+    window.localStorage.setItem(API_EMAIL_KEY, auth.email);
+  } catch {
+    // siehe oben
+  }
+};
+
+export const clearApiAuth = (): void => {
+  try {
+    window.localStorage.removeItem(API_TOKEN_KEY);
+    window.localStorage.removeItem(API_EMAIL_KEY);
+  } catch {
+    // siehe oben
+  }
+};
+
 // Ein Spiel gilt als "fortsetzbar", wenn es über den Setup-Bildschirm
 // hinaus ist. match-finished zählt bewusst mit, damit die Statistik-Seite
 // nach einem Reload nicht verloren geht, bevor der Nutzer sie gesehen hat.
@@ -179,6 +235,9 @@ export const isResumableState = (state: GameState): boolean => state.phase !== "
 
 export type MatchHistoryUploadStatus = "uploaded" | "not-uploaded" | "upload-disabled";
 
+// Status des API-Ziels. "not-logged-in": beim Match-Ende war kein Token da.
+export type MatchHistoryApiStatus = MatchHistoryUploadStatus | "not-logged-in";
+
 // Dieselben Angaben, die auch ins Gist gehen, plus Status und eine lokale ID.
 export interface MatchHistoryEntry {
   id: string;
@@ -192,6 +251,10 @@ export interface MatchHistoryEntry {
   highlights: string[];
   updatedAt: string;
   uploadStatus: MatchHistoryUploadStatus;
+  // Beide Felder fehlen bei Einträgen aus der Zeit vor dem API-Ziel.
+  // matchId macht den API-Upload idempotent (Unique-Feld in PocketBase).
+  matchId?: string;
+  apiUploadStatus?: MatchHistoryApiStatus;
 }
 
 const isHistoryEntry = (value: unknown): value is MatchHistoryEntry =>
@@ -229,6 +292,15 @@ export const updateMatchHistoryStatus = (
   const entries = loadMatchHistory();
   if (!entries.some((entry) => entry.id === id)) return;
   saveMatchHistory(entries.map((entry) => (entry.id === id ? { ...entry, uploadStatus } : entry)));
+};
+
+export const updateMatchHistoryEntry = (
+  id: string,
+  patch: Pick<Partial<MatchHistoryEntry>, "matchId" | "apiUploadStatus">
+): void => {
+  const entries = loadMatchHistory();
+  if (!entries.some((entry) => entry.id === id)) return;
+  saveMatchHistory(entries.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry)));
 };
 
 // ID des Historie-Eintrags, der zum laufenden Match gehört. Verhindert, dass
