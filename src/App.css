@@ -605,8 +605,8 @@ body {
 .dart-input__totals span {
   grid-column: 1 / -1;
   align-self: center;
-  color: var(--text-dim);
-  font-size: 1.45rem;
+  color: #fff;
+  font-size: 1.8rem;
   font-weight: bold;
 }
 
@@ -616,6 +616,8 @@ body {
 
 .dart-input__totals span::before {
   content: "→ ";
+  color: var(--text-dim);
+  font-size: 1.45rem;
 }
 
 .dart-input__throw-actions {
