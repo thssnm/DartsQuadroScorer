@@ -64,3 +64,35 @@ describe("SettingsModal", () => {
     expect(markup).not.toContain('type="email"');
   });
 });
+
+describe("SettingsModal - Livescore", () => {
+  const liveToggle = (markup: string): string | undefined =>
+    inputs(markup).find((input, index, all) => index === all.length - 1 && input.includes("checkbox"));
+
+  it("disables the livescore switch without login", () => {
+    const markup = render();
+
+    expect(markup).toContain("Livescore senden");
+    expect(markup).toContain("Zuerst bei der API anmelden");
+    expect(liveToggle(markup)).toContain("disabled");
+  });
+
+  it("offers the switch, default off, once logged in", () => {
+    const markup = render({ apiEmail: "board@example.com" });
+
+    expect(liveToggle(markup)).not.toContain("disabled");
+    expect(liveToggle(markup)).not.toContain("checked");
+    expect(markup).not.toContain("Zuerst bei der API anmelden");
+  });
+
+  it("shows the sender status line", () => {
+    const markup = render({
+      apiEmail: "board@example.com",
+      liveScoreEnabled: true,
+      liveScoreStatus: "Zuletzt gesendet: 19:05:07",
+    });
+
+    expect(liveToggle(markup)).toContain("checked");
+    expect(markup).toContain("Zuletzt gesendet: 19:05:07");
+  });
+});
