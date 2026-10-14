@@ -78,6 +78,23 @@ In der Match-Historie (☰) steht pro Match der Status für Gist und API; beide
 lassen sich dort nachträglich hochladen ("Upload" bzw. "Upload zur API").
 Die Spieler-Auswahl im Setup lädt Namen aus beiden Quellen.
 
+## Livescore
+
+Mit "Livescore senden" (Einstellungen, Default aus) schickt das Tablet den
+laufenden Spielstand an die PocketBase-Collection `livescore`, aus der ein
+separater Ticker liest. Der Schalter ist nur nach der API-Anmeldung bedienbar.
+
+- Gesendet wird bei jeder Änderung des Spielstands: ab Matchstart (501:501),
+  nach jeder Aufnahme, Korrektur, "Rückgängig" und Legwechsel.
+- Status `live` bis "Weiter zur Statistik", danach `finished`. "Spiel
+  abbrechen" setzt ebenfalls `finished`.
+- Der Sender ist ein reiner Beobachter: er blockiert nie, zeigt im Spiel
+  nichts an und berührt weder Spiellogik noch Ergebnis-Upload. Fehler
+  erscheinen nur als Statuszeile in den Einstellungen; der nächste
+  Spielstand wird automatisch erneut versucht.
+- Das Ergebnis eines live gesendeten Matches bekommt in der API dieselbe
+  `matchId` wie sein Livescore-Eintrag.
+
 ## Spielregeln (implementiert)
 
 - Start bei 501 Punkten, Double Out.

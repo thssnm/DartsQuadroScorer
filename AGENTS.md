@@ -26,12 +26,13 @@ src/game/         Spiellogik: Reducer, Typen, Statistik, Persistenz — ohne Rea
 src/gist/         GitHub-Gist-Anbindung: Upload, Spielernamen, Config
 src/api/          PocketBase-Anbindung (Login, Upload, Spielernamen) und die
                   Orchestrierung beider Upload-Ziele (uploadTargets.ts)
+src/live/         Livescore-Sender (Snapshot, Sender, ein Hook useLiveScore)
 src/components/   UI-Komponenten
 src/App.tsx       Komposition, Phasen-Routing, Effekte (Speichern, Upload)
 src/App.css       Styles der gesamten App (eine Datei)
 ```
 
-`src/game/`, `src/gist/` und `src/api/` enthalten **kein** JSX und keine React-Imports.
+`src/game/`, `src/gist/` und `src/api/` enthalten **kein** JSX und keine React-Imports. In `src/live/` ist nur `useLiveScore.ts` React.
 
 ### Zustand
 
@@ -80,6 +81,8 @@ Die folgenden Regeln sind in `gameReducer.test.ts` abgesichert. Wer sie ändert,
 - **Ein Upload pro Match.** `uploadMatchResultOnce` setzt `match-uploaded` ausschließlich nach einem *erfolgreichen* Upload — ein fehlgeschlagener Versuch muss wiederholbar bleiben. Für das API-Ziel gilt dasselbe mit `match-uploaded-api` (`uploadApiMatchResultOnce`). Alle Merker verfallen mit dem Match (Phase `setup`).
 - **Zwei unabhängige Upload-Ziele.** Gist und API haben je eigenen Status, Merker und Retry (`src/api/uploadTargets.ts`). Die Gist-Seite bleibt unverändert; "Neues Match" wartet auf beide Ziele, ein übersprungenes Ziel (API ohne Login) zählt als fertig. Popup-Text: ist der Gist betroffen, der bisherige Text samt Turnierleitungs-Hinweis; nur API → eigener Text.
 - **API-Datensatz.** `results` bekommt `matchId` (UUID, einmal pro Match im Historie-Eintrag persistiert, eindeutig in PocketBase), `boardName`, `home`, `guest`, `legsHome`, `legsGuest`, `averageHome`, `averageGuest`, `highlights`, `playedAt`. `acknowledged` wird nie gesendet. Ein 400 mit Feldfehler in `data.matchId` zählt als bereits hochgeladen. Token ohne `Bearer` im `Authorization`-Header; vor jedem Upload `auth-refresh`.
+- **Livescore ist Beobachter.** Der Sender (`src/live/`) liest den Spielzustand, löst nie Actions aus, wirft nie und hat keinen Einfluss auf Upload-Status, Merker, Popups oder "Neues Match". Default aus, aktiv nur mit Schalter **und** API-Token; ohne beides kein einziger Request. Höchstens ein Request gleichzeitig (5 s Timeout), danach nur der neueste Snapshot. Status `finished` erst nach "Weiter zur Statistik" oder bei "Spiel abbrechen". Bei 401/403 ein Refresh und ein Wiederholversuch, danach Pause bis zum nächsten Login oder App-Start.
+- **liveMatchId.** Wird nur bei aktivem Sender erzeugt (Key `livescore-session`, zusammen mit der Record-id) und verfällt bei neuem Match, Abbruch und nach dem `finished`-Snapshot. `ensureApiHistoryFields` übernimmt sie nur für den Historie-Eintrag des laufenden Matches; ohne Session bleibt die matchId-Erzeugung wie zuvor.
 - **Gist-Dateiformat.** `BoardGistFile` in `src/gist/api.ts` ist die Schnittstelle zum Dashboard: eine Datei `board-<Board>-<uuid>.json` pro beendetem Match mit `status: "finished"` und `acknowledged: false`, dazu die gemergte `players.json`. Feldnamen, `acknowledged`-Semantik und Dateinamensschema nur zusammen mit dem Dashboard ändern.
 - **localStorage-Schlüssel.** Alle unter dem Präfix `darts-quadro-scorer:`. Ein umbenannter Schlüssel verliert den laufenden Spielstand auf den Boards.
 
@@ -113,7 +116,7 @@ Interne Bezeichner im Code (`turn`, `remaining`, `legsWon`) bleiben englisch und
 
 - Server: `https://api.thssn.dev`, überschreibbar per `VITE_POCKETBASE_URL` (`src/api/client.ts`).
 - Login im Settings-Modal (`users/auth-with-password`). Im `localStorage` liegen nur Token und E-Mail (`api-token`, `api-email`), nie das Passwort.
-- Der Online-Schalter gilt für beide Ziele. Ohne Token ist das API-Ziel "skipped": kein Fehler, kein Popup.
+- Der Online-Schalter gilt für beide Ziele (nicht für den Livescore, der hat einen eigenen Schalter). Ohne Token ist das API-Ziel "skipped": kein Fehler, kein Popup.
 - Spieler: Dropdown vereinigt Gist und `players`-Collection; beim Upload best-effort `POST players` für Heim und Gast, Fehler werden ignoriert.
 
 ## Befehle
