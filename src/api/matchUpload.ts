@@ -1,6 +1,8 @@
 import type { GameState } from "../game/types";
 import {
   loadApiAuth,
+  loadCurrentMatchHistoryId,
+  loadLiveScoreSession,
   loadMatchHistory,
   loadMatchUploadedApi,
   saveApiAuth,
@@ -57,6 +59,10 @@ export type ApiResultSource = Pick<
 const findHistoryEntry = (id: string): MatchHistoryEntry | undefined =>
   loadMatchHistory().find((entry) => entry.id === id);
 
+// Hat der Livescore-Sender für das laufende Match schon eine matchId
+// vergeben, bekommt das Ergebnis dieselbe. Ohne Sender: neue UUID wie bisher.
+const newMatchIdForCurrentMatch = (): string => loadLiveScoreSession()?.matchId ?? createMatchFileId();
+
 // Ergänzt einen Historie-Eintrag um die API-Felder. Idempotent: eine schon
 // vergebene matchId und ein schon gesetzter Status bleiben stehen - sonst
 // bekäme ein Retry nach einem Reload eine neue ID und die Unique-Sperre in
@@ -67,7 +73,10 @@ export const ensureApiHistoryFields = (
 ): string => {
   const entry = findHistoryEntry(id);
   if (!entry) return createMatchFileId();
-  const matchId = entry.matchId ?? createMatchFileId();
+  // Die liveMatchId nur für den Eintrag des laufenden Matches - nie für ein
+  // altes Ergebnis aus der Historie.
+  const matchId =
+    entry.matchId ?? (id === loadCurrentMatchHistoryId() ? newMatchIdForCurrentMatch() : createMatchFileId());
   if (!entry.matchId || !entry.apiUploadStatus) {
     updateMatchHistoryEntry(id, { matchId, apiUploadStatus: entry.apiUploadStatus ?? initialStatus });
   }
@@ -125,7 +134,7 @@ export const uploadApiMatchResultOnce = async ({
   if (loadMatchUploadedApi()) return { result: "already-uploaded" };
 
   const entry = historyEntryId ? findHistoryEntry(historyEntryId) : undefined;
-  const matchId = historyEntryId ? ensureApiHistoryFields(historyEntryId) : createMatchFileId();
+  const matchId = historyEntryId ? ensureApiHistoryFields(historyEntryId) : newMatchIdForCurrentMatch();
   const source = entry ?? mapGameStateToBoardFile(state, defaultBoardName(boardId));
 
   const outcome = await uploadResult(source, matchId);

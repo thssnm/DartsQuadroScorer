@@ -16,6 +16,8 @@ import {
   saveMatchUploaded,
   saveMatchUploadedApi,
   loadApiAuth,
+  loadLiveScoreEnabled,
+  saveLiveScoreEnabled,
   loadMatchHistory,
   saveCurrentMatchHistoryId,
   type MatchHistoryEntry,
@@ -48,6 +50,8 @@ import {
   type UploadTarget,
   type UploadTargetsState,
 } from "./api/uploadTargets";
+import { useLiveScore } from "./live/useLiveScore";
+import { describeLiveSendStatus } from "./live/sender";
 import type { GameState } from "./game/types";
 import "./App.css";
 
@@ -69,6 +73,7 @@ function App() {
   const [gistId, setGistId] = useState(() => loadGistId());
   const [resultUploadEnabled, setResultUploadEnabled] = useState(() => loadResultUploadEnabled());
   const [apiAuth, setApiAuth] = useState(() => loadApiAuth());
+  const [liveScoreEnabled, setLiveScoreEnabled] = useState(() => loadLiveScoreEnabled());
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [history, setHistory] = useState<MatchHistoryEntry[]>([]);
@@ -176,6 +181,16 @@ function App() {
     runMatchUpload(UPLOAD_TARGETS);
   }, [boardId, matchConfirmed, resultUploadEnabled, runMatchUpload, state]);
 
+  // Livescore: reiner Beobachter, nach dem Upload-Effekt aufgerufen, damit
+  // der Ergebnis-Upload die liveMatchId sicher noch vorfindet.
+  const liveScoreStatus = useLiveScore({
+    state,
+    matchConfirmed,
+    boardId,
+    enabled: liveScoreEnabled,
+    token: apiAuth ? apiAuth.token : null,
+  });
+
   // Die Einstellungen werden erst beim Klick auf "Speichern" übernommen,
   // nicht mehr bei jedem Tastendruck.
   const saveSettings = (settings: Settings) => {
@@ -185,6 +200,8 @@ function App() {
     saveGistId(settings.gistId);
     setResultUploadEnabled(settings.resultUploadEnabled);
     saveResultUploadEnabled(settings.resultUploadEnabled);
+    setLiveScoreEnabled(settings.liveScoreEnabled);
+    saveLiveScoreEnabled(settings.liveScoreEnabled);
   };
 
   const settingsButton = (
@@ -225,6 +242,8 @@ function App() {
       boardId={boardId}
       gistId={gistId}
       resultUploadEnabled={resultUploadEnabled}
+      liveScoreEnabled={liveScoreEnabled}
+      liveScoreStatus={describeLiveSendStatus(liveScoreStatus)}
       onSave={saveSettings}
       onTestConnection={(testGistId) =>
         testGistConnection(loadGistConfig(testGistId)).then((result) =>

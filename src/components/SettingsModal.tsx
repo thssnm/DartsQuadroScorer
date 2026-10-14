@@ -4,12 +4,16 @@ export interface Settings {
   boardId: string;
   gistId: string;
   resultUploadEnabled: boolean;
+  liveScoreEnabled: boolean;
 }
 
 interface SettingsModalProps {
   boardId: string;
   gistId: string;
   resultUploadEnabled: boolean;
+  liveScoreEnabled?: boolean;
+  // Statuszeile des Livescore-Senders, null = noch nichts gesendet.
+  liveScoreStatus?: string | null;
   onTestConnection: (gistId: string) => Promise<string>;
   // E-Mail der API-Anmeldung, null = nicht angemeldet.
   apiEmail: string | null;
@@ -25,6 +29,8 @@ export const SettingsModal = ({
   boardId,
   gistId,
   resultUploadEnabled,
+  liveScoreEnabled = false,
+  liveScoreStatus = null,
   onTestConnection,
   apiEmail,
   onApiLogin,
@@ -39,6 +45,7 @@ export const SettingsModal = ({
   const [draftBoardId, setDraftBoardId] = useState(boardId);
   const [draftGistId, setDraftGistId] = useState(gistId);
   const [draftUploadEnabled, setDraftUploadEnabled] = useState(resultUploadEnabled);
+  const [draftLiveScoreEnabled, setDraftLiveScoreEnabled] = useState(liveScoreEnabled);
   const [connectionStatus, setConnectionStatus] = useState<string | null>(null);
   const [testingConnection, setTestingConnection] = useState(false);
   const [loginEmail, setLoginEmail] = useState(apiEmail ?? "");
@@ -95,6 +102,7 @@ export const SettingsModal = ({
       boardId: draftBoardId,
       gistId: draftGistId,
       resultUploadEnabled: draftUploadEnabled,
+      liveScoreEnabled: draftLiveScoreEnabled,
     });
     onClose();
   };
@@ -203,6 +211,20 @@ export const SettingsModal = ({
           </>
         )}
         {apiStatus && <p className="settings-modal__status">{apiStatus}</p>}
+        <label className="settings-modal__toggle">
+          <input
+            type="checkbox"
+            checked={draftLiveScoreEnabled}
+            onChange={(event) => setDraftLiveScoreEnabled(event.target.checked)}
+            disabled={apiEmail === null}
+          />
+          <span>Livescore senden</span>
+        </label>
+        {apiEmail === null ? (
+          <p className="settings-modal__status">Zuerst bei der API anmelden</p>
+        ) : (
+          liveScoreStatus && <p className="settings-modal__status">{liveScoreStatus}</p>
+        )}
         <button type="button" className="settings-modal__save" onClick={handleSave}>
           Speichern
         </button>

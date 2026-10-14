@@ -12,6 +12,8 @@ const MATCH_HISTORY_ID_KEY = "darts-quadro-scorer:match-history-id";
 const API_TOKEN_KEY = "darts-quadro-scorer:api-token";
 const API_EMAIL_KEY = "darts-quadro-scorer:api-email";
 const MATCH_UPLOADED_API_KEY = "darts-quadro-scorer:match-uploaded-api";
+const LIVESCORE_ENABLED_KEY = "darts-quadro-scorer:livescore-enabled";
+const LIVESCORE_SESSION_KEY = "darts-quadro-scorer:livescore-session";
 
 export const DEFAULT_BOARD_ID = "Board 1";
 
@@ -319,6 +321,57 @@ export const saveCurrentMatchHistoryId = (id: string | null): void => {
   try {
     if (id === null) window.localStorage.removeItem(MATCH_HISTORY_ID_KEY);
     else window.localStorage.setItem(MATCH_HISTORY_ID_KEY, id);
+  } catch {
+    // siehe oben
+  }
+};
+
+// ---------- Livescore ----------
+// Der Livescore-Sender (src/live/) beobachtet nur. Seine Keys hängen weder
+// am Spielzustand noch an den Upload-Merkern.
+
+export const loadLiveScoreEnabled = (): boolean => {
+  try {
+    return window.localStorage.getItem(LIVESCORE_ENABLED_KEY) === "true";
+  } catch {
+    return false;
+  }
+};
+
+export const saveLiveScoreEnabled = (enabled: boolean): void => {
+  try {
+    window.localStorage.setItem(LIVESCORE_ENABLED_KEY, enabled ? "true" : "false");
+  } catch {
+    // siehe oben
+  }
+};
+
+// liveMatchId des laufenden Matches und - sobald der erste POST durch ist -
+// die id des Datensatzes in der livescore-Collection. Beides zusammen, damit
+// eine id nie einem fremden Match zugeordnet wird.
+export interface LiveScoreSession {
+  matchId: string;
+  recordId?: string;
+}
+
+export const loadLiveScoreSession = (): LiveScoreSession | null => {
+  try {
+    const raw = window.localStorage.getItem(LIVESCORE_SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<LiveScoreSession> | null;
+    if (!parsed || typeof parsed.matchId !== "string" || !parsed.matchId) return null;
+    return typeof parsed.recordId === "string" && parsed.recordId
+      ? { matchId: parsed.matchId, recordId: parsed.recordId }
+      : { matchId: parsed.matchId };
+  } catch {
+    return null;
+  }
+};
+
+export const saveLiveScoreSession = (session: LiveScoreSession | null): void => {
+  try {
+    if (session === null) window.localStorage.removeItem(LIVESCORE_SESSION_KEY);
+    else window.localStorage.setItem(LIVESCORE_SESSION_KEY, JSON.stringify(session));
   } catch {
     // siehe oben
   }
