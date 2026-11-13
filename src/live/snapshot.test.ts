@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { createInitialState } from "../game/gameReducer";
 import { computePlayerStats } from "../game/stats";
+import type { GameState } from "../game/types";
 import { buildLiveSnapshot, sameSnapshot } from "./snapshot";
-import { beforeCheckout, checkout, playingState, reduce, throwTurn } from "./testHelpers";
+import { beforeCheckout, checkout, playingState, reduce, setSlot, throwTurn } from "./testHelpers";
 
 describe("buildLiveSnapshot", () => {
   it("maps a fresh match to 501:501 without averages", () => {
@@ -17,6 +18,9 @@ describe("buildLiveSnapshot", () => {
       legsGuest: 0,
       scoreHome: 501,
       scoreGuest: 501,
+      dartsHome: 0,
+      dartsGuest: 0,
+      bestOf: 3,
       activePlayer: "home",
       status: "live",
     });
@@ -79,6 +83,86 @@ describe("buildLiveSnapshot", () => {
   });
 });
 
+describe("buildLiveSnapshot bestOf", () => {
+  it("derives the match length from legsToWin", () => {
+    expect(buildLiveSnapshot(playingState(1), "B", "m").bestOf).toBe(1);
+    expect(buildLiveSnapshot(playingState(3), "B", "m").bestOf).toBe(5);
+    expect(buildLiveSnapshot(checkout(beforeCheckout(4)), "B", "m").bestOf).toBe(7);
+  });
+});
+
+describe("buildLiveSnapshot dartsHome/dartsGuest", () => {
+  const darts = (state: GameState) => {
+    const { dartsHome, dartsGuest } = buildLiveSnapshot(state, "B", "m");
+    return [dartsHome, dartsGuest];
+  };
+
+  it("counts three darts per turn, also for 0 points and empty confirmed slots", () => {
+    let state = throwTurn(playingState(), [[20, 3], [20], [6]]);
+    expect(darts(state)).toEqual([3, 0]);
+
+    state = throwTurn(state, [[0], [0], [0]]);
+    expect(darts(state)).toEqual([3, 3]);
+
+    // Aufnahme ohne einen einzigen eingegebenen Dart.
+    state = reduce(state, { type: "CONFIRM_TURN" });
+    expect(darts(state)).toEqual([6, 3]);
+  });
+
+  it("counts three darts for a bust", () => {
+    // Heim steht auf 40, T20 überwirft.
+    const state = throwTurn(beforeCheckout(2), [[20, 3]]);
+
+    expect(state.players[0].remaining).toBe(40);
+    expect(darts(state)).toEqual([12, 9]);
+  });
+
+  it("counts only the darts up to the checkout double", () => {
+    const one = checkout(beforeCheckout(2));
+    const two = throwTurn(beforeCheckout(2), [[20], [10, 2]]);
+    const three = throwTurn(beforeCheckout(2), [[10], [10], [10, 2]]);
+
+    for (const state of [one, two, three]) expect(state.phase).toBe("leg-finished");
+    expect(darts(one)).toEqual([10, 9]);
+    expect(darts(two)).toEqual([11, 9]);
+    expect(darts(three)).toEqual([12, 9]);
+  });
+
+  it("keeps the leg count at the end of the match next to the winner's 0", () => {
+    const snapshot = buildLiveSnapshot(checkout(beforeCheckout(1)), "B", "m", true);
+
+    expect(snapshot).toMatchObject({ scoreHome: 0, dartsHome: 10, dartsGuest: 9, status: "finished" });
+  });
+
+  it("resets both counts to 0 with the next leg", () => {
+    const state = reduce(checkout(beforeCheckout(2)), { type: "NEXT_LEG" });
+
+    expect(darts(state)).toEqual([0, 0]);
+    expect(darts(throwTurn(state, [[20], [20], [20]]))).toEqual([0, 3]);
+  });
+
+  it("follows UNDO_LAST_TURN", () => {
+    const state = throwTurn(throwTurn(playingState(), [[20], [20], [20]]), [[19], [19], [19]]);
+
+    expect(darts(reduce(state, { type: "UNDO_LAST_TURN" }))).toEqual([3, 0]);
+  });
+
+  it("follows UNDO_LEG_RESULT and a corrected checkout", () => {
+    let state = reduce(checkout(beforeCheckout(2)), { type: "UNDO_LEG_RESULT" });
+    expect(state.phase).toBe("playing");
+    expect(darts(state)).toEqual([10, 9]);
+
+    // Checkout nachträglich auf zwei Darts korrigiert: S20, D10.
+    state = reduce(state, { type: "EDIT_TURN", playerIndex: 0, turnIndex: 3 });
+    state = setSlot(reduce(state, { type: "CLEAR_SLOT", index: 0 }), 0, 20);
+    state = setSlot(state, 1, 10, 2);
+    state = reduce(state, { type: "CONFIRM_EDIT" });
+
+    expect(state.phase).toBe("leg-finished");
+    expect(darts(state)).toEqual([11, 9]);
+  });
+});
+
 describe("sameSnapshot", () => {
   it("compares by value", () => {
     const a = buildLiveSnapshot(playingState(), "B", "m");
@@ -86,6 +170,7 @@ describe("sameSnapshot", () => {
     expect(sameSnapshot(a, { ...a })).toBe(true);
     expect(sameSnapshot(a, { ...a, scoreHome: 400 })).toBe(false);
     expect(sameSnapshot(a, { ...a, averageHome: 50 })).toBe(false);
+    expect(sameSnapshot(a, { ...a, dartsGuest: 3 })).toBe(false);
     expect(sameSnapshot(a, null)).toBe(false);
   });
 });

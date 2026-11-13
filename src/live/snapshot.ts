@@ -14,6 +14,9 @@ export interface LiveSnapshot {
   legsGuest: number;
   scoreHome: number;
   scoreGuest: number;
+  dartsHome: number;
+  dartsGuest: number;
+  bestOf: number;
   averageHome?: number;
   averageGuest?: number;
   activePlayer: "home" | "guest";
@@ -26,6 +29,18 @@ const liveAverage = (player: PlayerState): number | undefined => {
   const darts = dartsInTurns([...player.legHistory.flatMap((leg) => leg.turns), ...player.turns]);
   if (darts === 0) return undefined;
   return Math.round(computePlayerStats(player).matchAverage * 10) / 10;
+};
+
+// Darts im laufenden Leg. Nach dem Checkout liegen die Aufnahmen beider
+// Spieler schon in legHistory - bis "Nächstes Leg" zeigt der Ticker weiter
+// das gerade beendete Leg (z.B. 10 beim 10-Darter). Die Dart-Zählregel
+// (drei Darts pro Aufnahme, beim Checkout nur bis zum Double) steckt
+// bereits in den gespeicherten Turns.
+const dartsInLeg = (state: GameState, player: PlayerState): number => {
+  if (state.phase === "leg-finished" || state.phase === "match-finished") {
+    return dartsInTurns(player.legHistory.at(-1)?.turns ?? []);
+  }
+  return dartsInTurns(player.turns);
 };
 
 // status ist "finished" erst nach "Weiter zur Statistik" (match-confirmed):
@@ -48,6 +63,9 @@ export const buildLiveSnapshot = (
     legsGuest: guest.legsWon,
     scoreHome: home.remaining,
     scoreGuest: guest.remaining,
+    dartsHome: dartsInLeg(state, home),
+    dartsGuest: dartsInLeg(state, guest),
+    bestOf: state.legsToWin * 2 - 1,
     ...(averageHome === undefined ? {} : { averageHome }),
     ...(averageGuest === undefined ? {} : { averageGuest }),
     activePlayer: state.activePlayer === 0 ? "home" : "guest",
@@ -64,6 +82,9 @@ const SNAPSHOT_KEYS: (keyof LiveSnapshot)[] = [
   "legsGuest",
   "scoreHome",
   "scoreGuest",
+  "dartsHome",
+  "dartsGuest",
+  "bestOf",
   "averageHome",
   "averageGuest",
   "activePlayer",
