@@ -1166,7 +1166,32 @@ body {
   border-bottom: none;
 }
 
+/* Beide Spieler zeigen ihre Darts - der Leg-Gewinner muss sich davon
+   abheben: Verlierer gedimmt, Gewinner fett mit rotem Punkt. */
+.leg-cell {
+  color: var(--text-dim);
+}
+
+.leg-cell--won {
+  color: var(--text);
+  font-weight: 700;
+}
+
+/* Unsichtbarer Platzhalter, damit die Zahlen einer Spalte bündig bleiben. */
+.leg-cell::before {
+  content: "●";
+  color: var(--red-bright);
+  margin-right: 6px;
+  visibility: hidden;
+}
+
+.leg-cell--won::before {
+  visibility: visible;
+}
+
 .leg-cell small {
+  font-weight: 400;
+
   color: var(--text-dim);
   margin-left: 6px;
 }
