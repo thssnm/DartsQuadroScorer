@@ -24,6 +24,48 @@ const finishedMatch = (): GameState => {
   };
 };
 
+describe("leg cells", () => {
+  it("shows the darts of the leg for the winner and the loser", () => {
+    const d = (segment: number, multiplier: 1 | 2 | 3 | 4 = 1) => ({ segment, multiplier });
+    const base = finishedMatch();
+    const state: GameState = {
+      ...base,
+      players: [
+        {
+          ...base.players[0],
+          legHistory: [
+            {
+              won: true,
+              turns: [
+                { darts: [d(20, 3), d(20, 3), d(20, 3)], scoreBefore: 501, scoreAfter: 321, bust: false },
+                { darts: [d(20, 3), d(20, 3), d(20, 3)], scoreBefore: 321, scoreAfter: 141, bust: false },
+                { darts: [d(20, 3), d(19, 3), d(12, 2)], scoreBefore: 141, scoreAfter: 0, bust: false },
+              ],
+            },
+          ],
+        },
+        {
+          ...base.players[1],
+          legHistory: [
+            {
+              won: false,
+              turns: [
+                { darts: [d(20), d(20), d(20)], scoreBefore: 501, scoreAfter: 441, bust: false },
+                { darts: [d(0), d(0), d(0)], scoreBefore: 441, scoreAfter: 441, bust: false },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const markup = renderToStaticMarkup(<MatchStats state={state} onNewMatch={() => {}} />);
+
+    expect(markup).toContain('<span class="leg-cell leg-cell--won">9 <small>');
+    expect(markup).toContain('<span class="leg-cell ">6 <small>');
+  });
+});
+
 const stubLocalStorage = () => {
   const store = new Map<string, string>();
   vi.stubGlobal("window", {

@@ -113,7 +113,7 @@ const LegCell = ({ leg }: { leg: PlayerState["legHistory"][number] | undefined }
   const avg = legAverage(leg.turns);
   return (
     <span className={`leg-cell ${leg.won ? "leg-cell--won" : ""}`}>
-      {leg.won ? darts : "-"} <small>Ø{avg.toFixed(1)}</small>
+      {darts} <small>Ø{avg.toFixed(1)}</small>
     </span>
   );
 };
