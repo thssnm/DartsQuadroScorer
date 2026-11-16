@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { PlayerNameField, SetupScreen } from "./SetupScreen";
+import { DEFAULT_BEST_OF, legsToWinFromBestOf } from "./setupLegs";
 
 describe("PlayerNameField", () => {
   it("renders a dropdown when player names are available", () => {
@@ -21,7 +22,39 @@ describe("PlayerNameField", () => {
   });
 });
 
+describe("legsToWinFromBestOf", () => {
+  it("maps best-of to the legs needed to win", () => {
+    expect(legsToWinFromBestOf("1")).toBe(1);
+    expect(legsToWinFromBestOf("3")).toBe(2);
+    expect(legsToWinFromBestOf("5")).toBe(3);
+    expect(legsToWinFromBestOf("11")).toBe(6);
+  });
+
+  it("treats an even number like the next lower odd one", () => {
+    expect(legsToWinFromBestOf("4")).toBe(2);
+  });
+
+  it("falls back to the default for empty or invalid input", () => {
+    expect(DEFAULT_BEST_OF).toBe(3);
+    expect(legsToWinFromBestOf("")).toBe(2);
+    expect(legsToWinFromBestOf("0")).toBe(2);
+    expect(legsToWinFromBestOf("-3")).toBe(2);
+    expect(legsToWinFromBestOf("abc")).toBe(2);
+  });
+});
+
 describe("SetupScreen", () => {
+  it("offers a whole-number input for best-of with default 3", () => {
+    const markup = renderToStaticMarkup(<SetupScreen onStart={vi.fn()} resultUploadEnabled={false} />);
+    const [bestOfInput] = [...markup.matchAll(/<input[^>]*type="number"[^>]*>/g)].map((m) => m[0]);
+
+    expect(bestOfInput).toContain('value="3"');
+    expect(bestOfInput).toContain('min="1"');
+    expect(markup).toContain("Best of (Legs)");
+    expect(markup).not.toContain("Best of 7");
+  });
+
+
   it("renders the Love for Darts sponsor link before the setup content", () => {
     const markup = renderToStaticMarkup(
       <SetupScreen onStart={vi.fn()} resultUploadEnabled={false} />

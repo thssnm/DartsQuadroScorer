@@ -1,18 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import loveForDartsLogo from "../assets/Love-for-Darts-Logo.svg";
 import { loadSetupPlayerNames } from "../api/playerNames";
+import { DEFAULT_BEST_OF, legsToWinFromBestOf } from "./setupLegs";
 
 interface SetupScreenProps {
   onStart: (nameA: string, nameB: string, legsToWin: number) => void;
   resultUploadEnabled: boolean;
 }
 
-const LEG_OPTIONS = [
-  { label: "Best of 1", legsToWin: 1 },
-  { label: "Best of 3", legsToWin: 2 },
-  { label: "Best of 5", legsToWin: 3 },
-  { label: "Best of 7", legsToWin: 4 },
-];
 
 interface PlayerNameFieldProps {
   label: string;
@@ -45,7 +40,7 @@ export const PlayerNameField = ({ label, value, playerNames, onChange }: PlayerN
 export const SetupScreen = ({ onStart, resultUploadEnabled }: SetupScreenProps) => {
   const [nameA, setNameA] = useState("Heim");
   const [nameB, setNameB] = useState("Gast");
-  const [legsToWin, setLegsToWin] = useState(2);
+  const [bestOf, setBestOf] = useState(String(DEFAULT_BEST_OF));
   const [playerNames, setPlayerNames] = useState<string[]>([]);
   // Die Namen werden einmal beim Öffnen geladen, nicht bei jeder Änderung
   // des Schalters.
@@ -81,23 +76,21 @@ export const SetupScreen = ({ onStart, resultUploadEnabled }: SetupScreenProps) 
       <PlayerNameField label="Spieler 2" value={nameB} playerNames={playerNames} onChange={setNameB} />
 
       <div className="setup-row">
-        <label>Legs</label>
-        <div className="leg-options">
-          {LEG_OPTIONS.map((opt) => (
-            <button
-              key={opt.legsToWin}
-              className={legsToWin === opt.legsToWin ? "active" : ""}
-              onClick={() => setLegsToWin(opt.legsToWin)}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
+        <label htmlFor="setup-best-of">Best of (Legs)</label>
+        <input
+          id="setup-best-of"
+          type="number"
+          inputMode="numeric"
+          min={1}
+          step={2}
+          value={bestOf}
+          onChange={(e) => setBestOf(e.target.value)}
+        />
       </div>
 
       <button
         className="start-btn"
-        onClick={() => onStart(nameA || "Spieler 1", nameB || "Spieler 2", legsToWin)}
+        onClick={() => onStart(nameA || "Spieler 1", nameB || "Spieler 2", legsToWinFromBestOf(bestOf))}
       >
         Spiel starten
       </button>
