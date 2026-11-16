@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_BOARD_ID,
   loadBoardId,
+  loadGameState,
   loadMatchConfirmed,
   loadResultUploadEnabled,
   saveBoardId,
@@ -23,6 +24,31 @@ const stubLocalStorage = (initial: Record<string, string> = {}) => {
   vi.stubGlobal("window", { localStorage });
   return localStorage;
 };
+
+describe("game state persistence", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("derives bestOf from legsToWin for a state saved before the change", () => {
+    stubLocalStorage({
+      "darts-quadro-scorer:game-state": JSON.stringify({ phase: "playing", legsToWin: 2, players: [] }),
+    });
+
+    const state = loadGameState();
+
+    expect(state?.bestOf).toBe(3);
+    expect(state).not.toHaveProperty("legsToWin");
+  });
+
+  it("keeps a stored bestOf as it is", () => {
+    stubLocalStorage({
+      "darts-quadro-scorer:game-state": JSON.stringify({ phase: "playing", bestOf: 2, players: [] }),
+    });
+
+    expect(loadGameState()?.bestOf).toBe(2);
+  });
+});
 
 describe("board id persistence", () => {
   afterEach(() => {

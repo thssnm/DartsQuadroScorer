@@ -21,6 +21,31 @@ const finishedMatch = (): GameState => {
   };
 };
 
+describe("match title", () => {
+  it("names the winner", () => {
+    expect(renderToStaticMarkup(<MatchStats state={finishedMatch()} onNewMatch={() => {}} />)).toContain(
+      "Alice gewinnt das Match!"
+    );
+  });
+
+  it("shows a draw for an even best-of with equal legs", () => {
+    const base = createInitialState("Alice", "Bob", 2);
+    const draw: GameState = {
+      ...base,
+      phase: "match-finished",
+      players: [
+        { ...base.players[0], legsWon: 1 },
+        { ...base.players[1], legsWon: 1 },
+      ],
+    };
+
+    const markup = renderToStaticMarkup(<MatchStats state={draw} onNewMatch={() => {}} />);
+
+    expect(markup).toContain("Unentschieden!");
+    expect(markup).not.toContain("gewinnt das Match");
+  });
+});
+
 describe("leg cells", () => {
   it("shows the darts of the leg for the winner and the loser", () => {
     const d = (segment: number, multiplier: 1 | 2 | 3 | 4 = 1) => ({ segment, multiplier });

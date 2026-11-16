@@ -399,7 +399,7 @@ describe("LiveScoreSender - Status und Abschluss", () => {
   it("clears the keys on a new match and starts with a fresh liveMatchId", async () => {
     const store = loggedIn({ [SESSION_KEY]: JSON.stringify({ matchId: "old", recordId: "rec-old" }) });
     const fetchMock = stubFetch();
-    const setup = createInitialState("Alice", "Bob", 2);
+    const setup = createInitialState("Alice", "Bob", 3);
 
     sender.observe(observation(setup));
     expect(session(store)).toBeNull();

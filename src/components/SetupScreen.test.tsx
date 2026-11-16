@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { PlayerNameField, SetupScreen } from "./SetupScreen";
-import { DEFAULT_BEST_OF, legsToWinFromBestOf } from "./setupLegs";
+import { DEFAULT_BEST_OF, bestOfFromInput } from "./setupLegs";
 
 describe("PlayerNameField", () => {
   it("renders a dropdown when player names are available", () => {
@@ -22,24 +22,21 @@ describe("PlayerNameField", () => {
   });
 });
 
-describe("legsToWinFromBestOf", () => {
-  it("maps best-of to the legs needed to win", () => {
-    expect(legsToWinFromBestOf("1")).toBe(1);
-    expect(legsToWinFromBestOf("3")).toBe(2);
-    expect(legsToWinFromBestOf("5")).toBe(3);
-    expect(legsToWinFromBestOf("11")).toBe(6);
-  });
-
-  it("treats an even number like the next lower odd one", () => {
-    expect(legsToWinFromBestOf("4")).toBe(2);
+describe("bestOfFromInput", () => {
+  it("accepts odd and even whole numbers", () => {
+    expect(bestOfFromInput("1")).toBe(1);
+    expect(bestOfFromInput("2")).toBe(2);
+    expect(bestOfFromInput("3")).toBe(3);
+    expect(bestOfFromInput("4")).toBe(4);
+    expect(bestOfFromInput("11")).toBe(11);
   });
 
   it("falls back to the default for empty or invalid input", () => {
     expect(DEFAULT_BEST_OF).toBe(3);
-    expect(legsToWinFromBestOf("")).toBe(2);
-    expect(legsToWinFromBestOf("0")).toBe(2);
-    expect(legsToWinFromBestOf("-3")).toBe(2);
-    expect(legsToWinFromBestOf("abc")).toBe(2);
+    expect(bestOfFromInput("")).toBe(3);
+    expect(bestOfFromInput("0")).toBe(3);
+    expect(bestOfFromInput("-3")).toBe(3);
+    expect(bestOfFromInput("abc")).toBe(3);
   });
 });
 

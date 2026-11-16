@@ -51,7 +51,7 @@ export interface GameState {
   players: [PlayerState, PlayerState];
   activePlayer: 0 | 1;
   startingPlayer: 0 | 1;
-  legsToWin: number; // z.B. 2 bei "Best of 3"
+  bestOf: number; // Gesamtzahl der Legs, z.B. 3 bei "Best of 3"
   currentSlots: [DartSlot, DartSlot, DartSlot]; // die 3 Darts der laufenden Aufnahme
   // Ist gesetzt, während eine bereits bestätigte Aufnahme gerade bearbeitet
   // wird (Klick in der Score-Liste). currentSlots zeigt in diesem Fall die

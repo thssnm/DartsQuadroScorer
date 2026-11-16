@@ -48,6 +48,7 @@ import {
 import { useLiveScore } from "./live/useLiveScore";
 import { describeLiveSendStatus } from "./live/sender";
 import type { GameState } from "./game/types";
+import { matchTitle } from "./game/matchEnd";
 import "./App.css";
 
 const hasMatchInput = (state: GameState): boolean =>
@@ -59,7 +60,7 @@ function App() {
   const [state, dispatch] = useReducer(gameReducer, undefined, () => {
     const saved = loadGameState();
     if (saved && isResumableState(saved)) return saved;
-    return createInitialState("Heim", "Gast", 2);
+    return createInitialState("Heim", "Gast", 3);
   });
   // Ein mit "Weiter" bestätigtes Match bleibt bestätigt - nach einem Reload
   // geht es direkt zur Statistik, nicht zurück ins Match-Ende-Popup.
@@ -281,11 +282,11 @@ function App() {
         <div className="app__floating-settings">{setupCornerButtons}</div>
         <SetupScreen
           resultUploadEnabled={resultUploadEnabled}
-          onStart={(nameA, nameB, legsToWin) => {
+          onStart={(nameA, nameB, bestOf) => {
             setShowMatchStats(false);
             setUploadMessage(null);
             setUploadState(IDLE_UPLOAD_STATE);
-            dispatch({ type: "RESET_MATCH", nameA, nameB, legsToWin });
+            dispatch({ type: "RESET_MATCH", nameA, nameB, bestOf });
             dispatch({ type: "START_MATCH" });
           }}
         />
@@ -314,7 +315,7 @@ function App() {
               type: "RESET_MATCH",
               nameA: state.players[0].name,
               nameB: state.players[1].name,
-              legsToWin: state.legsToWin,
+              bestOf: state.bestOf,
             });
           }}
         />
@@ -344,12 +345,6 @@ function App() {
         : state.players[1]
       : null;
 
-  const matchWinnerForOverlay =
-    matchFinished
-      ? state.players[0].legsWon > state.players[1].legsWon
-        ? state.players[0]
-        : state.players[1]
-      : null;
 
   const legsSummary = `Legs: ${state.players[0].name} ${state.players[0].legsWon} : ${state.players[1].legsWon} ${state.players[1].name}`;
 
@@ -393,9 +388,9 @@ function App() {
           />
         )}
 
-        {matchWinnerForOverlay && (
+        {matchFinished && (
           <ResultOverlay
-            title={`${matchWinnerForOverlay.name} gewinnt das Match!`}
+            title={matchTitle(state)}
             summary={legsSummary}
             confirmLabel="Weiter zur Statistik"
             onConfirm={() => {
@@ -408,7 +403,7 @@ function App() {
           />
         )}
 
-        {uploadMessage && !matchWinnerForOverlay && <div className="upload-toast">{uploadMessage}</div>}
+        {uploadMessage && !matchFinished && <div className="upload-toast">{uploadMessage}</div>}
 
         {state.editError && (
           <div className="leg-overlay">

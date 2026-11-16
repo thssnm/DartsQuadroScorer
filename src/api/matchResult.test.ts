@@ -13,7 +13,7 @@ const turn = (darts: Dart[], scoreBefore: number, scoreAfter: number, bust = fal
 
 describe("mapGameStateToResult", () => {
   it("maps a finished match to the result record", () => {
-    const base = createInitialState("Alice", "Bob", 2);
+    const base = createInitialState("Alice", "Bob", 3);
     const state = {
       ...base,
       phase: "match-finished" as const,
@@ -35,7 +35,7 @@ describe("mapGameStateToResult", () => {
   });
 
   it("maps rounded match averages when players have thrown darts", () => {
-    const base = createInitialState("Alice", "Bob", 2);
+    const base = createInitialState("Alice", "Bob", 3);
     const state = {
       ...base,
       phase: "match-finished" as const,

@@ -14,8 +14,8 @@ export const turn = (scoreBefore: number, darts: Dart[], scoreAfter: number): Tu
 
 export const reduce = (state: GameState, action: GameAction): GameState => gameReducer(state, action);
 
-export const playingState = (legsToWin = 2): GameState => ({
-  ...createInitialState("Alice", "Bob", legsToWin),
+export const playingState = (bestOf = 3): GameState => ({
+  ...createInitialState("Alice", "Bob", bestOf),
   phase: "playing",
 });
 
@@ -37,9 +37,9 @@ export const throwTurn = (state: GameState, darts: [number, Multiplier?][]): Gam
     { type: "CONFIRM_TURN" }
   );
 
-// Heim steht auf 40 und checkt mit D20 - bei legsToWin 1 ist das Match aus.
-export const beforeCheckout = (legsToWin = 1): GameState => {
-  let state = playingState(legsToWin);
+// Heim steht auf 40 und checkt mit D20 - bei Best of 1 ist das Match aus.
+export const beforeCheckout = (bestOf = 1): GameState => {
+  let state = playingState(bestOf);
   state = withPlayer(state, 0, {
     ...state.players[0],
     remaining: 40,

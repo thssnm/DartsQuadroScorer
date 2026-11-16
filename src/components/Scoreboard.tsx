@@ -26,7 +26,7 @@ export const Scoreboard = ({ state, onEditTurn }: ScoreboardProps) => {
         <div className={`player-name ${state.activePlayer === 0 ? "active" : ""}`}>{p0.name}</div>
         <div className="legs-info">
           {p0.legsWon} : {p1.legsWon}
-          <span className="legs-format">(Best of {state.legsToWin * 2 - 1} Legs)</span>
+          <span className="legs-format">(Best of {state.bestOf} Legs)</span>
         </div>
         <div className={`player-name ${state.activePlayer === 1 ? "active" : ""}`}>{p1.name}</div>
       </div>

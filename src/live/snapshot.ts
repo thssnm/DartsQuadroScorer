@@ -65,7 +65,7 @@ export const buildLiveSnapshot = (
     scoreGuest: guest.remaining,
     dartsHome: dartsInLeg(state, home),
     dartsGuest: dartsInLeg(state, guest),
-    bestOf: state.legsToWin * 2 - 1,
+    bestOf: state.bestOf,
     ...(averageHome === undefined ? {} : { averageHome }),
     ...(averageGuest === undefined ? {} : { averageGuest }),
     activePlayer: state.activePlayer === 0 ? "home" : "guest",

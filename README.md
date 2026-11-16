@@ -37,7 +37,8 @@ installieren, statt jedes Mal `npm run dev` zu starten.
 
 ## Bedienung
 
-- **Setup:** Spielernamen eintragen, Anzahl Legs wählen (Best of 1/3/5/7),
+- **Setup:** Spielernamen eintragen, "Best of" als ganze Zahl eintragen
+  (Default 3, gerade Werte erlaubt),
   mit dem Switch-Button den Startspieler festlegen.
 - **Eingabe:** Zahl 1–20 antippen für einfachen Wert. Vorher x2/x3/x4
   aktivieren für Double/Triple/Quadro. 25 = Bull, mit aktivem x2 = Bull-Extra
@@ -88,7 +89,9 @@ separater Ticker liest. Der Schalter ist nur nach der API-Anmeldung bedienbar.
 - Bust bei: Unterschreiten von 0, Rest genau 1, oder Rest 0 ohne
   Double-Finish.
 - Legs werden automatisch gezählt, Startspieler wechselt nach jedem Leg.
-- Match endet, sobald ein Spieler die nötige Anzahl Legs erreicht hat.
+- Match über "Best of N" Legs: endet, sobald ein Spieler mehr als die
+  Hälfte der Legs hat oder alle Legs gespielt sind. Bei geradem N ist ein
+  Unentschieden möglich (Best of 2: 2:0, 0:2 oder 1:1).
 
 ## Nicht enthalten (mögliche Erweiterungen)
 

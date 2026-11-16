@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import loveForDartsLogo from "../assets/Love-for-Darts-Logo.svg";
 import { loadSetupPlayerNames } from "../api/playerNames";
-import { DEFAULT_BEST_OF, legsToWinFromBestOf } from "./setupLegs";
+import { DEFAULT_BEST_OF, bestOfFromInput } from "./setupLegs";
 
 interface SetupScreenProps {
-  onStart: (nameA: string, nameB: string, legsToWin: number) => void;
+  onStart: (nameA: string, nameB: string, bestOf: number) => void;
   resultUploadEnabled: boolean;
 }
 
@@ -82,7 +82,7 @@ export const SetupScreen = ({ onStart, resultUploadEnabled }: SetupScreenProps) 
           type="number"
           inputMode="numeric"
           min={1}
-          step={2}
+          step={1}
           value={bestOf}
           onChange={(e) => setBestOf(e.target.value)}
         />
@@ -90,7 +90,7 @@ export const SetupScreen = ({ onStart, resultUploadEnabled }: SetupScreenProps) 
 
       <button
         className="start-btn"
-        onClick={() => onStart(nameA || "Spieler 1", nameB || "Spieler 2", legsToWinFromBestOf(bestOf))}
+        onClick={() => onStart(nameA || "Spieler 1", nameB || "Spieler 2", bestOfFromInput(bestOf))}
       >
         Spiel starten
       </button>

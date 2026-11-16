@@ -2,6 +2,7 @@ import type { GameState, PlayerState } from "../game/types";
 import { turnTotal } from "../game/types";
 import { computePlayerStats } from "../game/stats";
 import { dartsInTurns } from "../game/dartCount";
+import { matchTitle } from "../game/matchEnd";
 
 interface MatchStatsProps {
   state: GameState;
@@ -27,7 +28,6 @@ export const MatchStats = ({
   newMatchDisabled = false,
 }: MatchStatsProps) => {
   const [p0, p1] = state.players;
-  const winner = p0.legsWon > p1.legsWon ? p0 : p1;
   const stats0 = computePlayerStats(p0);
   const stats1 = computePlayerStats(p1);
 
@@ -42,7 +42,7 @@ export const MatchStats = ({
 
   return (
     <div className="match-stats">
-      <h1>{winner.name} gewinnt das Match!</h1>
+      <h1>{matchTitle(state)}</h1>
       <p className="match-stats__score">
         {p0.name} {p0.legsWon} : {p1.legsWon} {p1.name}
       </p>

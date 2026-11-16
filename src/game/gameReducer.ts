@@ -1,5 +1,6 @@
 import type { Dart, DartSlot, GameState, Multiplier, PlayerState, Turn } from "./types";
 import { dartValue, emptySlot, isDoubleFinish, isSlotComplete, slotToDart, turnTotal } from "./types";
+import { isMatchOver } from "./matchEnd";
 
 export const START_SCORE = 501;
 
@@ -21,13 +22,13 @@ const hasMatchInput = (state: GameState): boolean =>
 export const createInitialState = (
   nameA: string,
   nameB: string,
-  legsToWin: number
+  bestOf: number
 ): GameState => ({
   phase: "setup",
   players: [createInitialPlayer(nameA), createInitialPlayer(nameB)],
   activePlayer: 0,
   startingPlayer: 0,
-  legsToWin,
+  bestOf,
   currentSlots: emptySlots(),
   editingTurn: null,
   editError: null,
@@ -48,7 +49,7 @@ export type GameAction =
   | { type: "NEXT_LEG" }
   | { type: "UNDO_LEG_RESULT" }
   | { type: "ABORT_MATCH" }
-  | { type: "RESET_MATCH"; nameA: string; nameB: string; legsToWin: number };
+  | { type: "RESET_MATCH"; nameA: string; nameB: string; bestOf: number };
 
 interface TurnOutcome {
   scoreAfter: number;
@@ -135,11 +136,11 @@ const finalizedTurnDarts = (
 export const gameReducer = (state: GameState, action: GameAction): GameState => {
   switch (action.type) {
     case "RESET_MATCH": {
-      return createInitialState(action.nameA, action.nameB, action.legsToWin);
+      return createInitialState(action.nameA, action.nameB, action.bestOf);
     }
 
     case "ABORT_MATCH": {
-      return createInitialState(state.players[0].name, state.players[1].name, state.legsToWin);
+      return createInitialState(state.players[0].name, state.players[1].name, state.bestOf);
     }
 
     case "SWITCH_STARTING_PLAYER": {
@@ -237,7 +238,7 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
         const finalPlayers: [PlayerState, PlayerState] =
           activeIdx === 0 ? [finishedPlayer, finishedOther] : [finishedOther, finishedPlayer];
 
-        const matchWon = finishedPlayer.legsWon >= state.legsToWin;
+        const matchWon = isMatchOver(finalPlayers, state.bestOf);
 
         return {
           ...state,
@@ -416,7 +417,7 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
         const finalPlayers: [PlayerState, PlayerState] =
           playerIndex === 0 ? [finishedPlayer, finishedOther] : [finishedOther, finishedPlayer];
 
-        const matchWon = finishedPlayer.legsWon >= state.legsToWin;
+        const matchWon = isMatchOver(finalPlayers, state.bestOf);
 
         return {
           ...state,

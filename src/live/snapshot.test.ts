@@ -39,7 +39,7 @@ describe("buildLiveSnapshot", () => {
   });
 
   it("rounds the average to one decimal like the match statistics", () => {
-    const state = beforeCheckout(2);
+    const state = beforeCheckout(3);
     const snapshot = buildLiveSnapshot(state, "B", "m");
     const expected = Math.round(computePlayerStats(state.players[0]).matchAverage * 10) / 10;
 
@@ -54,7 +54,7 @@ describe("buildLiveSnapshot", () => {
   });
 
   it("counts won legs", () => {
-    const state = checkout(beforeCheckout(2));
+    const state = checkout(beforeCheckout(3));
     expect(state.phase).toBe("leg-finished");
 
     const snapshot = buildLiveSnapshot(state, "B", "m");
@@ -63,7 +63,7 @@ describe("buildLiveSnapshot", () => {
   });
 
   it("stays live in the leg and match popups and finishes only after the confirmation", () => {
-    const legFinished = checkout(beforeCheckout(2));
+    const legFinished = checkout(beforeCheckout(3));
     const matchFinished = checkout(beforeCheckout(1));
 
     expect(buildLiveSnapshot(legFinished, "B", "m").status).toBe("live");
@@ -84,10 +84,10 @@ describe("buildLiveSnapshot", () => {
 });
 
 describe("buildLiveSnapshot bestOf", () => {
-  it("derives the match length from legsToWin", () => {
+  it("sends the configured match length, even values included", () => {
     expect(buildLiveSnapshot(playingState(1), "B", "m").bestOf).toBe(1);
-    expect(buildLiveSnapshot(playingState(3), "B", "m").bestOf).toBe(5);
-    expect(buildLiveSnapshot(checkout(beforeCheckout(4)), "B", "m").bestOf).toBe(7);
+    expect(buildLiveSnapshot(playingState(2), "B", "m").bestOf).toBe(2);
+    expect(buildLiveSnapshot(checkout(beforeCheckout(7)), "B", "m").bestOf).toBe(7);
   });
 });
 
@@ -111,16 +111,16 @@ describe("buildLiveSnapshot dartsHome/dartsGuest", () => {
 
   it("counts three darts for a bust", () => {
     // Heim steht auf 40, T20 überwirft.
-    const state = throwTurn(beforeCheckout(2), [[20, 3]]);
+    const state = throwTurn(beforeCheckout(3), [[20, 3]]);
 
     expect(state.players[0].remaining).toBe(40);
     expect(darts(state)).toEqual([12, 9]);
   });
 
   it("counts only the darts up to the checkout double", () => {
-    const one = checkout(beforeCheckout(2));
-    const two = throwTurn(beforeCheckout(2), [[20], [10, 2]]);
-    const three = throwTurn(beforeCheckout(2), [[10], [10], [10, 2]]);
+    const one = checkout(beforeCheckout(3));
+    const two = throwTurn(beforeCheckout(3), [[20], [10, 2]]);
+    const three = throwTurn(beforeCheckout(3), [[10], [10], [10, 2]]);
 
     for (const state of [one, two, three]) expect(state.phase).toBe("leg-finished");
     expect(darts(one)).toEqual([10, 9]);
@@ -135,7 +135,7 @@ describe("buildLiveSnapshot dartsHome/dartsGuest", () => {
   });
 
   it("resets both counts to 0 with the next leg", () => {
-    const state = reduce(checkout(beforeCheckout(2)), { type: "NEXT_LEG" });
+    const state = reduce(checkout(beforeCheckout(3)), { type: "NEXT_LEG" });
 
     expect(darts(state)).toEqual([0, 0]);
     expect(darts(throwTurn(state, [[20], [20], [20]]))).toEqual([0, 3]);
@@ -148,7 +148,7 @@ describe("buildLiveSnapshot dartsHome/dartsGuest", () => {
   });
 
   it("follows UNDO_LEG_RESULT and a corrected checkout", () => {
-    let state = reduce(checkout(beforeCheckout(2)), { type: "UNDO_LEG_RESULT" });
+    let state = reduce(checkout(beforeCheckout(3)), { type: "UNDO_LEG_RESULT" });
     expect(state.phase).toBe("playing");
     expect(darts(state)).toEqual([10, 9]);
 

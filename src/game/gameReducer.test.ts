@@ -24,8 +24,8 @@ const turn = (scoreBefore: number, darts: Dart[], scoreAfter: number, bust = fal
   bust,
 });
 
-const playingState = (legsToWin = 2): GameState => ({
-  ...createInitialState("A", "B", legsToWin),
+const playingState = (bestOf = 3): GameState => ({
+  ...createInitialState("A", "B", bestOf),
   phase: "playing",
 });
 
@@ -177,7 +177,7 @@ describe("slot input", () => {
 
 describe("starting player", () => {
   it("can be switched after opening the game page before the first input", () => {
-    const state = reduce(createInitialState("A", "B", 2), { type: "START_MATCH" });
+    const state = reduce(createInitialState("A", "B", 3), { type: "START_MATCH" });
 
     const result = reduce(state, { type: "SWITCH_STARTING_PLAYER" });
 
@@ -186,7 +186,7 @@ describe("starting player", () => {
   });
 
   it("cannot be switched after dart input has started", () => {
-    let state = reduce(createInitialState("A", "B", 2), { type: "START_MATCH" });
+    let state = reduce(createInitialState("A", "B", 3), { type: "START_MATCH" });
     state = setSlot(state, 0, 20);
 
     const result = reduce(state, { type: "SWITCH_STARTING_PLAYER" });
@@ -295,7 +295,7 @@ describe("CONFIRM_TURN", () => {
     expect(result.players[0].legHistory[0]?.turns[0]?.darts).toEqual([dart(20), dart(20), dart(20, 2)]);
   });
 
-  it("finishes the match when the player reaches legsToWin", () => {
+  it("finishes the match when the player has more than half of the legs", () => {
     let state = playingState(1);
     state = withPlayer(state, 0, { ...state.players[0], remaining: 40 });
     state = setSlot(state, 0, 20, 2);
@@ -538,11 +538,56 @@ describe("CONFIRM_EDIT", () => {
 // Leg wurde dadurch fälschlich beendet. "Rückgängig" im Popup muss den
 // kompletten Leg-Abschluss zurücknehmen, damit die Aufnahme über den
 // normalen Korrektur-Mechanismus bearbeitbar wird.
+// Gerade "Best of"-Werte: das Match kann unentschieden enden.
+describe("even best-of", () => {
+  // Spieler mit dem gegebenen Leg-Stand checkt 40 mit D20.
+  const finishLeg = (bestOf: number, legsA: number, legsB: number, by: 0 | 1): GameState => {
+    let state = playingState(bestOf);
+    state = withPlayer(state, 0, { ...state.players[0], legsWon: legsA });
+    state = withPlayer(state, 1, { ...state.players[1], legsWon: legsB });
+    state = { ...state, activePlayer: by };
+    state = withPlayer(state, by, { ...state.players[by], remaining: 40 });
+    state = setSlot(state, 0, 20, 2);
+    return reduce(state, { type: "CONFIRM_TURN" });
+  };
+
+  it("best of 2: 1:0 continues, 2:0 and 0:2 win, 1:1 ends as a draw", () => {
+    expect(finishLeg(2, 0, 0, 0).phase).toBe("leg-finished");
+    expect(finishLeg(2, 1, 0, 0).phase).toBe("match-finished");
+    expect(finishLeg(2, 0, 1, 1).phase).toBe("match-finished");
+
+    const draw = finishLeg(2, 1, 0, 1);
+    expect(draw.phase).toBe("match-finished");
+    expect(draw.players.map((p) => p.legsWon)).toEqual([1, 1]);
+  });
+
+  it("best of 4: 3:1 wins, 2:1 continues, 2:2 ends as a draw", () => {
+    expect(finishLeg(4, 2, 1, 0).phase).toBe("match-finished");
+    expect(finishLeg(4, 1, 1, 0).phase).toBe("leg-finished");
+    expect(finishLeg(4, 1, 2, 0).phase).toBe("match-finished");
+  });
+
+  it("odd best-of keeps the old rule: 2:0 wins a best of 3, 1:1 continues", () => {
+    expect(finishLeg(3, 1, 0, 0).phase).toBe("match-finished");
+    expect(finishLeg(3, 0, 1, 0).phase).toBe("leg-finished");
+  });
+
+  it("takes back a drawn match end with UNDO_LEG_RESULT", () => {
+    const draw = finishLeg(2, 1, 0, 1);
+
+    const result = reduce(draw, { type: "UNDO_LEG_RESULT" });
+
+    expect(result.phase).toBe("playing");
+    expect(result.players.map((p) => p.legsWon)).toEqual([1, 0]);
+    expect(result.players[1].turns.at(-1)?.darts).toEqual([dart(20, 2)]);
+  });
+});
+
 describe("UNDO_LEG_RESULT", () => {
   // Spieler 0 (Starter) wirft die 4. Aufnahme auf Rest 40 und tippt D20
   // statt S20 - das Leg gilt damit als gewonnen.
-  const legWronglyFinished = (legsToWin = 2): GameState => {
-    let state = playingState(legsToWin);
+  const legWronglyFinished = (bestOf = 3): GameState => {
+    let state = playingState(bestOf);
     state = withPlayer(state, 0, {
       ...state.players[0],
       remaining: 40,

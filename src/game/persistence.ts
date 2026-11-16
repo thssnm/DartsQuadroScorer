@@ -32,11 +32,19 @@ export const saveGameState = (state: GameState): void => {
   }
 };
 
+// Ältere Spielstände kennen nur "legsToWin" (Legs zum Sieg). Daraus wird
+// die Gesamtzahl der Legs, damit ein laufendes Match einen Deploy übersteht.
+const migrateGameState = (state: GameState & { legsToWin?: number }): GameState => {
+  if (typeof state.bestOf === "number") return state;
+  const { legsToWin, ...rest } = state;
+  return { ...rest, bestOf: typeof legsToWin === "number" ? legsToWin * 2 - 1 : 3 };
+};
+
 export const loadGameState = (): GameState | null => {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as GameState;
+    return migrateGameState(JSON.parse(raw) as GameState & { legsToWin?: number });
   } catch {
     return null;
   }
