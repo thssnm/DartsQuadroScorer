@@ -109,7 +109,7 @@ Interne Bezeichner im Code (`turn`, `remaining`, `legsWon`) bleiben englisch und
 
 - Server: `https://api.thssn.dev`, überschreibbar per `VITE_POCKETBASE_URL` (`src/api/client.ts`). Keine Secrets im Build.
 - Board-Name wird pro Gerät in den App-Einstellungen gesetzt und liegt im `localStorage`, nicht im Build.
-- Login im Settings-Modal (`users/auth-with-password`). Im `localStorage` liegen nur Token und E-Mail (`api-token`, `api-email`), nie das Passwort.
+- Das Settings-Modal samt Login ist nur mit URL-Parameter `?settings` erreichbar (`src/settingsAccess.ts`, einmal beim Start ausgewertet). Login im Settings-Modal (`users/auth-with-password`). Im `localStorage` liegen nur Token und E-Mail (`api-token`, `api-email`), nie das Passwort.
 - Der Schalter "Ergebnis-Upload aktivieren" gilt für Upload und Spielerliste (nicht für den Livescore, der hat einen eigenen Schalter). Ohne Token ist der Upload "skipped": kein Fehler, kein Popup. Die App läuft ohne Anmeldung vollständig offline — eine fehlende Anmeldung darf nie ein laufendes Spiel stören.
 - Spieler: Dropdown aus der `players`-Collection; beim Upload best-effort `POST players` für Heim und Gast, Fehler werden ignoriert.
 

@@ -22,9 +22,10 @@ const finishedMatch = (): GameState => {
 };
 
 // Simuliert einen App-Start mit dem Inhalt, den localStorage überlebt hat.
-const renderAfterReload = (stored: Record<string, string>): string => {
+const renderAfterReload = (stored: Record<string, string>, search = ""): string => {
   const store = new Map(Object.entries(stored));
   vi.stubGlobal("window", {
+    location: { search },
     localStorage: {
       getItem: (key: string) => store.get(key) ?? null,
       setItem: (key: string, value: string) => {
@@ -72,6 +73,29 @@ describe("App with a drawn match", () => {
     const stats = renderAfterReload({ [GAME_STATE_KEY]: JSON.stringify(state), [MATCH_CONFIRMED_KEY]: "true" });
     expect(stats).toContain('class="match-stats"');
     expect(stats).toContain("Unentschieden!");
+  });
+});
+
+describe("settings access", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("offers no settings button without the URL parameter", () => {
+    const markup = renderAfterReload({});
+
+    expect(markup).not.toContain("Einstellungen öffnen");
+    expect(markup).toContain("Match-Historie öffnen");
+  });
+
+  it("offers the settings button with ?settings, during the match as well", () => {
+    expect(renderAfterReload({}, "?settings")).toContain("Einstellungen öffnen");
+    expect(renderAfterReload({ [GAME_STATE_KEY]: JSON.stringify(finishedMatch()) }, "?settings")).toContain(
+      "Einstellungen öffnen"
+    );
+    expect(renderAfterReload({ [GAME_STATE_KEY]: JSON.stringify(finishedMatch()) })).not.toContain(
+      "Einstellungen öffnen"
+    );
   });
 });
 

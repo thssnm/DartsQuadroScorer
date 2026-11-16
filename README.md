@@ -51,6 +51,14 @@ installieren, statt jedes Mal `npm run dev` zu starten.
   Double als letzten Dart).
 - **Rücktaste:** Letzten eingegebenen Dart der aktuellen Aufnahme löschen.
 
+## Einstellungen
+
+Das Zahnrad (Board-Name, Login, Upload, Livescore) erscheint nur, wenn die
+App mit dem Parameter `?settings` geöffnet wird, z. B.
+`https://<adresse>/?settings`. Ohne den Parameter gibt es im UI keinen Weg
+zum Login. Die einmal gespeicherte Anmeldung bleibt erhalten, das Board kann
+danach ohne Parameter laufen. Das ersetzt kein Rate-Limiting in PocketBase.
+
 ## Ergebnis-Upload (API)
 
 Ein bestätigtes Match ("Weiter zur Statistik") wird an die PocketBase-API

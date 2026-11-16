@@ -49,6 +49,7 @@ import { useLiveScore } from "./live/useLiveScore";
 import { describeLiveSendStatus } from "./live/sender";
 import type { GameState } from "./game/types";
 import { matchTitle } from "./game/matchEnd";
+import { hasSettingsAccess } from "./settingsAccess";
 import "./App.css";
 
 const hasMatchInput = (state: GameState): boolean =>
@@ -70,6 +71,9 @@ function App() {
   const [apiAuth, setApiAuth] = useState(() => loadApiAuth());
   const [liveScoreEnabled, setLiveScoreEnabled] = useState(() => loadLiveScoreEnabled());
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Einmal beim Start ausgewertet; der Parameter steht in der Adresse, mit
+  // der das Board eingerichtet wird.
+  const [settingsAccess] = useState(() => hasSettingsAccess());
   const [historyOpen, setHistoryOpen] = useState(false);
   const [history, setHistory] = useState<MatchHistoryEntry[]>([]);
   // ID des Historie-Eintrags zum laufenden Match, um dessen Status nach dem
@@ -185,7 +189,7 @@ function App() {
     saveLiveScoreEnabled(settings.liveScoreEnabled);
   };
 
-  const settingsButton = (
+  const settingsButton = settingsAccess ? (
     <button
       type="button"
       className="settings-btn"
@@ -195,7 +199,7 @@ function App() {
     >
       ⚙
     </button>
-  );
+  ) : null;
 
   // Historie und Versionsnummer nur im Startbildschirm: während des Spiels
   // soll die Ecke über dem Scoreboard so leer wie möglich bleiben.
@@ -218,7 +222,7 @@ function App() {
     </>
   );
 
-  const settingsModal = settingsOpen ? (
+  const settingsModal = settingsAccess && settingsOpen ? (
     <SettingsModal
       boardId={boardId}
       resultUploadEnabled={resultUploadEnabled}
