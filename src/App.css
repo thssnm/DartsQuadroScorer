@@ -862,20 +862,29 @@ body {
   margin-bottom: 8px;
 }
 
-.setup-checkbox {
-  display: flex;
+/* Spezifischer als ".setup-row label" und ".setup-row input" - sonst
+   wird das Label zum Block und die Checkbox bekommt Padding, Rahmen und
+   volle Breite eines Textfelds. Optik wie der Schalter in den Einstellungen. */
+.setup-row .setup-checkbox {
+  display: inline-flex;
   align-items: center;
   gap: 10px;
+  margin: 0;
   color: var(--text);
-  font-size: 1rem;
+  font-size: 0.95rem;
   cursor: pointer;
 }
 
-.setup-checkbox input {
-  width: 22px;
-  height: 22px;
+.setup-row .setup-checkbox input {
+  width: 20px;
+  height: 20px;
   margin: 0;
   padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  accent-color: var(--red-bright);
+  cursor: pointer;
 }
 
 .setup-hint {
