@@ -105,4 +105,12 @@ describe("SetupScreen", () => {
     expect(markup.indexOf('class="setup-sponsor"')).toBeLessThan(markup.indexOf("<h1>"));
     expect(markup).toContain('alt="Love for Darts"');
   });
+
+  it("links imprint and privacy policy on the start screen, without ?settings", () => {
+    stubLocalStorage();
+    const markup = renderToStaticMarkup(<SetupScreen onStart={vi.fn()} />);
+
+    expect(markup).toContain(">Impressum</button>");
+    expect(markup).toContain(">Datenschutz</button>");
+  });
 });

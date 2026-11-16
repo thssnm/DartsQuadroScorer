@@ -3,6 +3,7 @@ import loveForDartsLogo from "../assets/Love-for-Darts-Logo.svg";
 import { loadSetupPlayerNames } from "../api/playerNames";
 import { loadLastBestOf, loadLastInputMode } from "../game/persistence";
 import type { InputMode } from "../game/types";
+import { LegalFooter, LegalModal, type LegalPage } from "./LegalPages";
 import { DEFAULT_BEST_OF, bestOfFromInput } from "./setupLegs";
 
 interface SetupScreenProps {
@@ -46,6 +47,7 @@ export const SetupScreen = ({ onStart }: SetupScreenProps) => {
   // Vorbelegt mit der letzten Wahl, beim ersten Mal Einzeldarteingabe.
   const [singleDarts, setSingleDarts] = useState(() => loadLastInputMode() === "darts");
   const [playerNames, setPlayerNames] = useState<string[]>([]);
+  const [legalPage, setLegalPage] = useState<LegalPage | null>(null);
   useEffect(() => {
     let ignore = false;
     void loadSetupPlayerNames().then((players) => {
@@ -108,6 +110,9 @@ export const SetupScreen = ({ onStart }: SetupScreenProps) => {
       >
         Spiel starten
       </button>
+
+      <LegalFooter onOpen={setLegalPage} />
+      {legalPage && <LegalModal page={legalPage} onClose={() => setLegalPage(null)} />}
     </div>
   );
 };
