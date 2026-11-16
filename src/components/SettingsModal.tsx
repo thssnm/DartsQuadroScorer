@@ -101,44 +101,11 @@ export const SettingsModal = ({
             ×
           </button>
         </div>
-        <label className="settings-modal__field">
-          <span>Board-Name</span>
-          <input
-            value={draftBoardId}
-            onChange={(event) => setDraftBoardId(event.target.value)}
-            placeholder="Board-Name eingeben"
-            autoFocus
-          />
-        </label>
-        <label className="settings-modal__toggle">
-          <input
-            type="checkbox"
-            checked={draftUploadEnabled}
-            onChange={(event) => setDraftUploadEnabled(event.target.checked)}
-          />
-          <span>Ergebnis-Upload aktivieren</span>
-        </label>
-        <h3 className="settings-modal__section">API</h3>
-        {apiEmail !== null ? (
+        {apiEmail === null ? (
+          // Ohne Anmeldung gibt es nichts einzustellen: Upload, Spielerliste
+          // und Livescore hängen alle am Token.
           <>
-            <p className="settings-modal__status">Angemeldet als {apiEmail}</p>
-            <button type="button" className="settings-modal__test" onClick={handleApiTest} disabled={apiBusy}>
-              {apiBusy ? "Verbindung wird getestet …" : "API-Verbindung testen"}
-            </button>
-            <button
-              type="button"
-              className="settings-modal__test"
-              onClick={() => {
-                setApiStatus(null);
-                onApiLogout();
-              }}
-              disabled={apiBusy}
-            >
-              Abmelden
-            </button>
-          </>
-        ) : (
-          <>
+            <h3 className="settings-modal__section">Anmeldung</h3>
             <label className="settings-modal__field">
               <span>E-Mail</span>
               <input
@@ -146,6 +113,7 @@ export const SettingsModal = ({
                 value={loginEmail}
                 onChange={(event) => setLoginEmail(event.target.value)}
                 autoComplete="username"
+                autoFocus
               />
             </label>
             <label className="settings-modal__field">
@@ -165,26 +133,57 @@ export const SettingsModal = ({
             >
               {apiBusy ? "Anmeldung läuft …" : "Anmelden"}
             </button>
+            {apiStatus && <p className="settings-modal__status">{apiStatus}</p>}
+          </>
+        ) : (
+          <>
+            <p className="settings-modal__status">Angemeldet als {apiEmail}</p>
+            <button type="button" className="settings-modal__test" onClick={handleApiTest} disabled={apiBusy}>
+              {apiBusy ? "Verbindung wird getestet …" : "Verbindung testen"}
+            </button>
+            <button
+              type="button"
+              className="settings-modal__test"
+              onClick={() => {
+                setApiStatus(null);
+                onApiLogout();
+              }}
+              disabled={apiBusy}
+            >
+              Abmelden
+            </button>
+            {apiStatus && <p className="settings-modal__status">{apiStatus}</p>}
+            <h3 className="settings-modal__section">Board</h3>
+            <label className="settings-modal__field">
+              <span>Board-Name</span>
+              <input
+                value={draftBoardId}
+                onChange={(event) => setDraftBoardId(event.target.value)}
+                placeholder="Board-Name eingeben"
+              />
+            </label>
+            <label className="settings-modal__toggle">
+              <input
+                type="checkbox"
+                checked={draftUploadEnabled}
+                onChange={(event) => setDraftUploadEnabled(event.target.checked)}
+              />
+              <span>Ergebnis-Upload aktivieren</span>
+            </label>
+            <label className="settings-modal__toggle">
+              <input
+                type="checkbox"
+                checked={draftLiveScoreEnabled}
+                onChange={(event) => setDraftLiveScoreEnabled(event.target.checked)}
+              />
+              <span>Livescore senden</span>
+            </label>
+            {liveScoreStatus && <p className="settings-modal__status">{liveScoreStatus}</p>}
+            <button type="button" className="settings-modal__save" onClick={handleSave}>
+              Speichern
+            </button>
           </>
         )}
-        {apiStatus && <p className="settings-modal__status">{apiStatus}</p>}
-        <label className="settings-modal__toggle">
-          <input
-            type="checkbox"
-            checked={draftLiveScoreEnabled}
-            onChange={(event) => setDraftLiveScoreEnabled(event.target.checked)}
-            disabled={apiEmail === null}
-          />
-          <span>Livescore senden</span>
-        </label>
-        {apiEmail === null ? (
-          <p className="settings-modal__status">Zuerst bei der API anmelden</p>
-        ) : (
-          liveScoreStatus && <p className="settings-modal__status">{liveScoreStatus}</p>
-        )}
-        <button type="button" className="settings-modal__save" onClick={handleSave}>
-          Speichern
-        </button>
       </div>
     </div>
   );

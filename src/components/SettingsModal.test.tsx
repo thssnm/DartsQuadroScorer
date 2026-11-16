@@ -19,76 +19,59 @@ const render = (overrides: Partial<Parameters<typeof SettingsModal>[0]> = {}): s
 
 const inputs = (markup: string): string[] => [...markup.matchAll(/<input[^>]*>/g)].map((m) => m[0]);
 
-describe("SettingsModal", () => {
-  it("has no gist settings any more", () => {
+describe("SettingsModal while logged out", () => {
+  it("shows only the login with e-mail and password", () => {
     const markup = render();
+    const [emailInput, passwordInput, ...rest] = inputs(markup);
 
-    expect(markup).not.toContain("Gist");
-    expect(markup).not.toContain("Verbindung testen</button>");
-  });
-
-  it("offers a save button", () => {
-    expect(render()).toContain("Speichern");
-  });
-
-  it("prefills the fields from the stored settings", () => {
-    const markup = render({ boardId: "Board 7", resultUploadEnabled: false });
-    const [boardInput, uploadToggle] = inputs(markup);
-
-    expect(boardInput).toContain('value="Board 7"');
-    expect(boardInput).not.toContain('type="password"');
-    expect(uploadToggle).not.toContain("checked");
-  });
-
-  it("offers the API login with e-mail and password while logged out", () => {
-    const markup = render();
-    const [, , emailInput, passwordInput] = inputs(markup);
-
-    expect(markup).toContain("API");
     expect(emailInput).toContain('type="email"');
     expect(passwordInput).toContain('type="password"');
+    expect(rest).toHaveLength(0);
     expect(markup).toContain("Anmelden");
     expect(markup).not.toContain("Abmelden");
   });
 
-  it("shows the logged-in user with logout and connection test", () => {
-    const markup = render({ apiEmail: "board@example.com" });
+  it("hides board name, upload switch, livescore and save until logged in", () => {
+    const markup = render();
 
-    expect(markup).toContain("Angemeldet als board@example.com");
-    expect(markup).toContain("Abmelden");
-    expect(markup).toContain("API-Verbindung testen");
-    expect(markup).not.toContain('type="email"');
+    expect(markup).not.toContain("Board-Name");
+    expect(markup).not.toContain("Ergebnis-Upload aktivieren");
+    expect(markup).not.toContain("Livescore senden");
+    expect(markup).not.toContain("Speichern");
+    expect(markup).not.toContain("Gist");
   });
 });
 
-describe("SettingsModal - Livescore", () => {
-  const liveToggle = (markup: string): string | undefined =>
-    inputs(markup).find((input, index, all) => index === all.length - 1 && input.includes("checkbox"));
+describe("SettingsModal while logged in", () => {
+  const loggedIn = (overrides: Partial<Parameters<typeof SettingsModal>[0]> = {}) =>
+    render({ apiEmail: "board@example.com", ...overrides });
 
-  it("disables the livescore switch without login", () => {
-    const markup = render();
+  it("shows the user with logout and connection test instead of the login form", () => {
+    const markup = loggedIn();
+
+    expect(markup).toContain("Angemeldet als board@example.com");
+    expect(markup).toContain("Abmelden");
+    expect(markup).toContain("Verbindung testen");
+    expect(markup).not.toContain('type="email"');
+  });
+
+  it("prefills board name and switches from the stored settings", () => {
+    const markup = loggedIn({ boardId: "Board 7", resultUploadEnabled: false, liveScoreEnabled: true });
+    const [boardInput, uploadToggle, liveToggle] = inputs(markup);
+
+    expect(boardInput).toContain('value="Board 7"');
+    expect(boardInput).not.toContain('type="password"');
+    expect(uploadToggle).toContain("checkbox");
+    expect(uploadToggle).not.toContain("checked");
+    expect(liveToggle).toContain("checked");
+    expect(liveToggle).not.toContain("disabled");
+    expect(markup).toContain("Speichern");
+  });
+
+  it("shows the livescore sender status line", () => {
+    const markup = loggedIn({ liveScoreEnabled: true, liveScoreStatus: "Zuletzt gesendet: 19:05:07" });
 
     expect(markup).toContain("Livescore senden");
-    expect(markup).toContain("Zuerst bei der API anmelden");
-    expect(liveToggle(markup)).toContain("disabled");
-  });
-
-  it("offers the switch, default off, once logged in", () => {
-    const markup = render({ apiEmail: "board@example.com" });
-
-    expect(liveToggle(markup)).not.toContain("disabled");
-    expect(liveToggle(markup)).not.toContain("checked");
-    expect(markup).not.toContain("Zuerst bei der API anmelden");
-  });
-
-  it("shows the sender status line", () => {
-    const markup = render({
-      apiEmail: "board@example.com",
-      liveScoreEnabled: true,
-      liveScoreStatus: "Zuletzt gesendet: 19:05:07",
-    });
-
-    expect(liveToggle(markup)).toContain("checked");
     expect(markup).toContain("Zuletzt gesendet: 19:05:07");
   });
 });
