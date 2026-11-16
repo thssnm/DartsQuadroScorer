@@ -1,5 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <rect width="512" height="512" fill="#1a1a1e"/>
-  <circle cx="256" cy="256" r="179.5" fill="none" stroke="#a01818" stroke-width="25"/>
-  <circle cx="256" cy="256" r="51.5" fill="#c02020"/>
+  <g fill="none" stroke="#3a3a3f" stroke-width="9">
+    <circle cx="256" cy="256" r="222"/>
+    <circle cx="256" cy="256" r="169"/>
+    <circle cx="256" cy="256" r="113"/>
+  </g>
+  <clipPath id="x"><rect x="90" y="207" width="150" height="134"/></clipPath>
+  <g clip-path="url(#x)" stroke="#ede9e0" stroke-width="42">
+    <path d="M116 198 L216 350 M216 198 L116 350"/>
+  </g>
+  <path fill="#b52025" fill-rule="evenodd" d="M322 163 H382 V274 H402 V313 H382 V341 H330 V313 H243 V272 Z M330 214 V274 H286 Z"/>
 </svg>
