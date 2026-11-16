@@ -90,6 +90,14 @@ describe("evaluateTurn", () => {
     });
   });
 
+  it("accepts D1 as the lowest possible checkout", () => {
+    expect(evaluateTurn(2, [dart(1, 2)])).toEqual({
+      scoreAfter: 0,
+      bust: false,
+      legWon: true,
+    });
+  });
+
   it("accepts a bull-extra finish", () => {
     expect(evaluateTurn(50, [dart(25, 2)])).toEqual({
       scoreAfter: 0,
@@ -245,6 +253,23 @@ describe("CONFIRM_TURN", () => {
     expect(result.players[0].turns).toEqual([]);
     expect(result.players[0].legHistory[0]?.won).toBe(true);
     expect(result.players[0].legHistory[0]?.turns[0]?.darts).toEqual([dart(20, 2)]);
+  });
+
+  // Turnier-Rückmeldung: bei Rest 2 soll D1 das Leg beenden, egal ob erst die
+  // Zahl oder erst der Multiplikator getippt wird.
+  it("finishes a leg with D1 at 2 remaining in either input order", () => {
+    const at2 = withPlayer(playingState(), 0, { ...playingState().players[0], remaining: 2 });
+
+    const numberFirst = reduce(setSlot(at2, 0, 1, 2), { type: "CONFIRM_TURN" });
+    expect(numberFirst.phase).toBe("leg-finished");
+    expect(numberFirst.players[0].legsWon).toBe(1);
+
+    let multiplierFirst = reduce(at2, { type: "SET_SLOT_MULTIPLIER", index: 0, multiplier: 2 });
+    multiplierFirst = reduce(multiplierFirst, { type: "SET_SLOT_SEGMENT", index: 0, segment: 1 });
+    multiplierFirst = reduce(multiplierFirst, { type: "CONFIRM_TURN" });
+    expect(multiplierFirst.phase).toBe("leg-finished");
+    expect(multiplierFirst.players[0].legsWon).toBe(1);
+    expect(multiplierFirst.players[0].legHistory[0]?.turns[0]?.darts).toEqual([dart(1, 2)]);
   });
 
   it("counts a two-dart checkout when the second slot wins the leg", () => {
