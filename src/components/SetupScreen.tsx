@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import loveForDartsLogo from "../assets/Love-for-Darts-Logo.svg";
 import { loadSetupPlayerNames } from "../api/playerNames";
-import { loadLastBestOf, loadLastInputMode } from "../game/persistence";
+import { loadBoardId, loadLastBestOf, loadLastInputMode } from "../game/persistence";
+import { PARTNER_URL, countPartnerClick } from "../api/partnerClicks";
 import type { InputMode } from "../game/types";
 import { LegalFooter, LegalModal, type LegalPage } from "./LegalPages";
 import { DEFAULT_BEST_OF, bestOfFromInput } from "./setupLegs";
@@ -63,9 +64,10 @@ export const SetupScreen = ({ onStart }: SetupScreenProps) => {
     <div className="setup-screen">
       <a
         className="setup-sponsor"
-        href="https://lovefordarts.de"
+        href={PARTNER_URL}
         target="_blank"
         rel="noreferrer"
+        onClick={() => countPartnerClick(loadBoardId())}
         aria-label="Love for Darts Website öffnen"
       >
         <span>Partner</span>

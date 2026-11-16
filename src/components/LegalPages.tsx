@@ -50,10 +50,17 @@ const Datenschutz = () => (
       erforderlich (§ 25 Abs. 2 Nr. 2 TDDDG). Es werden keine Cookies und kein Tracking eingesetzt.
     </p>
 
-    <h3>Externe Links</h3>
+    <h3>Partner-Link</h3>
     <p>
       Der Partner-Link führt zu lovefordarts.de. Daten werden erst beim Anklicken an den dortigen Anbieter
-      übertragen; es gilt dessen Datenschutzerklärung.
+      übertragen; es gilt dessen Datenschutzerklärung. Der Link enthält Kennzeichen (UTM-Parameter), an denen der
+      Anbieter erkennt, dass der Besuch aus dieser App kommt.
+    </p>
+    <p>
+      Um die Zahl der Klicks auszuwerten, sendet die App beim Anklicken eine Meldung an den Server api.thssn.dev.
+      Gespeichert werden nur der Zeitpunkt und der Name des Boards, keine Angaben zur Person. Der Server
+      verarbeitet dabei technisch bedingt die IP-Adresse. Rechtsgrundlage ist das berechtigte Interesse an der
+      Auswertung der Partnerschaft (Art. 6 Abs. 1 lit. f DSGVO).
     </p>
 
     <h3>Ihre Rechte</h3>

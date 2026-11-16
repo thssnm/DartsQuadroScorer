@@ -113,6 +113,7 @@ Interne Bezeichner im Code (`turn`, `remaining`, `legsWon`) bleiben englisch und
 - Board-Name wird pro Gerät in den App-Einstellungen gesetzt und liegt im `localStorage`, nicht im Build.
 - Das Settings-Modal samt Login ist nur mit URL-Parameter `?settings` erreichbar (`src/settingsAccess.ts`, einmal beim Start ausgewertet). Login im Settings-Modal (`users/auth-with-password`). Im `localStorage` liegen nur Token und E-Mail (`api-token`, `api-email`), nie das Passwort.
 - Der Schalter "Ergebnis-Upload aktivieren" gilt für den Ergebnis-Upload (nicht für den Livescore, der hat einen eigenen Schalter). Ohne Token ist der Upload "skipped": kein Fehler, kein Popup. Die App läuft ohne Anmeldung vollständig offline — eine fehlende Anmeldung darf nie ein laufendes Spiel stören.
+- Partner-Link: UTM-Parameter am Link plus best-effort `POST partner_clicks` (nur `boardName`, ohne Token, wirft nie, `src/api/partnerClicks.ts`). Die Collection erlaubt öffentliches Anlegen, Lesen nur für Superuser.
 - Spieler: Dropdown angemeldet **nur** aus der `players`-Collection (kein Fallback auf lokale Namen), ohne Anmeldung aus den lokal gemerkten Namen (`player-names`, bei "Spiel starten" gefüllt, max. 50). Beim Upload best-effort `POST players` für Heim und Gast, Fehler werden ignoriert.
 
 ## Befehle

@@ -100,7 +100,7 @@ describe("SetupScreen", () => {
     );
 
     expect(markup).toContain('class="setup-sponsor"');
-    expect(markup).toContain('href="https://lovefordarts.de"');
+    expect(markup).toContain('href="https://lovefordarts.de/?utm_source=quadro-scorer&amp;utm_medium=app&amp;utm_campaign=partner"');
     expect(markup).toContain('target="_blank"');
     expect(markup.indexOf('class="setup-sponsor"')).toBeLessThan(markup.indexOf("<h1>"));
     expect(markup).toContain('alt="Love for Darts"');

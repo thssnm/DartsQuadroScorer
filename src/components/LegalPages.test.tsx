@@ -26,9 +26,12 @@ describe("LegalPages", () => {
 
     expect(markup).toContain(LEGAL_CONTACT.name);
     expect(markup).toContain("Vercel");
-    expect(markup).not.toContain("api.thssn.dev");
     expect(markup).not.toContain("Livescore");
+    expect(markup).not.toContain("Anmeldung");
     expect(markup).toContain("localStorage");
     expect(markup).toContain("lovefordarts.de");
+    // Klickzählung des Partner-Links.
+    expect(markup).toContain("UTM-Parameter");
+    expect(markup).toContain("api.thssn.dev");
   });
 });
