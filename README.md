@@ -71,8 +71,11 @@ erscheint das Fehler-Popup mit "Upload erneut versuchen". Ein
 fehlgeschlagener Upload wird beim nächsten Start der App erneut versucht.
 
 In der Match-Historie (☰) steht pro Match der Upload-Status; ein nicht
-übertragenes Ergebnis lässt sich dort nachträglich hochladen. Die
-Spieler-Auswahl im Setup lädt die Namen aus der API.
+übertragenes Ergebnis lässt sich dort nachträglich hochladen.
+
+Die Spieler-Auswahl im Setup zeigt angemeldet ausschließlich die Namen aus
+der API. Ohne Anmeldung zeigt sie die Namen der zuletzt an diesem Gerät
+gestarteten Matches (lokal gespeichert, maximal 50).
 
 ## Livescore
 

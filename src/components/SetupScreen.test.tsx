@@ -42,7 +42,7 @@ describe("bestOfFromInput", () => {
 
 describe("SetupScreen", () => {
   it("offers a whole-number input for best-of with default 3", () => {
-    const markup = renderToStaticMarkup(<SetupScreen onStart={vi.fn()} resultUploadEnabled={false} />);
+    const markup = renderToStaticMarkup(<SetupScreen onStart={vi.fn()} />);
     const [bestOfInput] = [...markup.matchAll(/<input[^>]*type="number"[^>]*>/g)].map((m) => m[0]);
 
     expect(bestOfInput).toContain('value="3"');
@@ -54,7 +54,7 @@ describe("SetupScreen", () => {
 
   it("renders the Love for Darts sponsor link before the setup content", () => {
     const markup = renderToStaticMarkup(
-      <SetupScreen onStart={vi.fn()} resultUploadEnabled={false} />
+      <SetupScreen onStart={vi.fn()} />
     );
 
     expect(markup).toContain('class="setup-sponsor"');

@@ -1,14 +1,18 @@
-import { loadApiAuth } from "../game/persistence";
+import { loadApiAuth, loadLocalPlayerNames } from "../game/persistence";
 import { readPlayersFromApi } from "./client";
 
-// Spielerliste fürs Dropdown aus der players-Collection, alphabetisch.
-// Bewusst einfache String-Sortierung, keine Lokalisierung. Fällt die API
-// aus, bleibt das Dropdown leer - der Name lässt sich immer tippen.
-export const loadSetupPlayerNames = async (resultUploadEnabled: boolean): Promise<string[]> => {
-  if (!resultUploadEnabled) return [];
+const sorted = (names: string[]): string[] => [...new Set(names)].sort();
+
+// Spielerliste fürs Dropdown, alphabetisch (bewusst einfache String-
+// Sortierung, keine Lokalisierung). Angemeldet: ausschließlich die
+// players-Collection - fällt die API aus, bleibt das Dropdown leer, der
+// Name lässt sich immer tippen. Ohne Anmeldung: die lokal gemerkten Namen
+// der letzten Matches.
+export const loadSetupPlayerNames = async (): Promise<string[]> => {
+  const auth = loadApiAuth();
+  if (!auth) return sorted(loadLocalPlayerNames());
   try {
-    const players = await readPlayersFromApi(loadApiAuth()?.token ?? null);
-    return [...new Set(players)].sort();
+    return sorted(await readPlayersFromApi(auth.token));
   } catch {
     return [];
   }

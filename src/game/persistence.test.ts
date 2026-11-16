@@ -3,7 +3,9 @@ import {
   DEFAULT_BOARD_ID,
   loadBoardId,
   loadGameState,
+  loadLocalPlayerNames,
   loadMatchConfirmed,
+  rememberPlayerNames,
   loadResultUploadEnabled,
   saveBoardId,
   saveMatchConfirmed,
@@ -47,6 +49,38 @@ describe("game state persistence", () => {
     });
 
     expect(loadGameState()?.bestOf).toBe(2);
+  });
+});
+
+describe("local player names", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("remembers the players of a started match, newest first and without duplicates", () => {
+    stubLocalStorage();
+
+    rememberPlayerNames(["Alice", "Bob"]);
+    rememberPlayerNames([" Chris ", "Alice"]);
+
+    expect(loadLocalPlayerNames()).toEqual(["Chris", "Alice", "Bob"]);
+  });
+
+  it("ignores empty names and caps the list", () => {
+    stubLocalStorage();
+
+    rememberPlayerNames(["", "  "]);
+    expect(loadLocalPlayerNames()).toEqual([]);
+
+    for (let i = 0; i < 60; i++) rememberPlayerNames([`P${i}`]);
+    expect(loadLocalPlayerNames()).toHaveLength(50);
+    expect(loadLocalPlayerNames()[0]).toBe("P59");
+  });
+
+  it("survives damaged storage", () => {
+    stubLocalStorage({ "darts-quadro-scorer:player-names": "kein json" });
+
+    expect(loadLocalPlayerNames()).toEqual([]);
   });
 });
 

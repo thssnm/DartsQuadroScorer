@@ -16,6 +16,7 @@ import {
   loadLiveScoreEnabled,
   saveLiveScoreEnabled,
   loadMatchHistory,
+  rememberPlayerNames,
   saveCurrentMatchHistoryId,
   type MatchHistoryEntry,
 } from "./game/persistence";
@@ -285,8 +286,9 @@ function App() {
       <>
         <div className="app__floating-settings">{setupCornerButtons}</div>
         <SetupScreen
-          resultUploadEnabled={resultUploadEnabled}
           onStart={(nameA, nameB, bestOf) => {
+            // Für das Dropdown ohne Anmeldung.
+            rememberPlayerNames([nameA, nameB]);
             setShowMatchStats(false);
             setUploadMessage(null);
             setUploadState(IDLE_UPLOAD_STATE);

@@ -12,6 +12,10 @@ const API_EMAIL_KEY = "darts-quadro-scorer:api-email";
 const MATCH_UPLOADED_API_KEY = "darts-quadro-scorer:match-uploaded-api";
 const LIVESCORE_ENABLED_KEY = "darts-quadro-scorer:livescore-enabled";
 const LIVESCORE_SESSION_KEY = "darts-quadro-scorer:livescore-session";
+const PLAYER_NAMES_KEY = "darts-quadro-scorer:player-names";
+
+// Mehr Namen braucht ein Board nicht - die Liste soll ein Dropdown bleiben.
+const MAX_LOCAL_PLAYER_NAMES = 50;
 
 export const DEFAULT_BOARD_ID = "Board 1";
 
@@ -285,6 +289,31 @@ export const saveCurrentMatchHistoryId = (id: string | null): void => {
   try {
     if (id === null) window.localStorage.removeItem(MATCH_HISTORY_ID_KEY);
     else window.localStorage.setItem(MATCH_HISTORY_ID_KEY, id);
+  } catch {
+    // siehe oben
+  }
+};
+
+// ---------- Lokale Spielernamen ----------
+// Namen der zuletzt gestarteten Matches, für das Dropdown ohne Anmeldung.
+// Neueste zuerst, ohne Dubletten.
+
+export const loadLocalPlayerNames = (): string[] => {
+  try {
+    const raw = window.localStorage.getItem(PLAYER_NAMES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed) ? parsed.filter((name): name is string => typeof name === "string") : [];
+  } catch {
+    return [];
+  }
+};
+
+export const rememberPlayerNames = (names: string[]): void => {
+  const fresh = names.map((name) => name.trim()).filter(Boolean);
+  const merged = [...fresh, ...loadLocalPlayerNames().filter((name) => !fresh.includes(name))];
+  try {
+    window.localStorage.setItem(PLAYER_NAMES_KEY, JSON.stringify(merged.slice(0, MAX_LOCAL_PLAYER_NAMES)));
   } catch {
     // siehe oben
   }
