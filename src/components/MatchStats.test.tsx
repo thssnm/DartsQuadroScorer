@@ -3,12 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MatchStats } from "./MatchStats";
 import { createInitialState } from "../game/gameReducer";
 import type { GameState } from "../game/types";
-import {
-  IDLE_UPLOAD_STATE,
-  isNewMatchLocked,
-  runUploadFlow,
-  type UploadFlowState,
-} from "../gist/uploadFlow";
+import { IDLE_UPLOAD_STATE, isNewMatchLocked, type UploadFlowState } from "../api/uploadFlow";
+import { runApiUploadFlow } from "../api/matchUpload";
+import { apiRoutes, loggedIn, stubFetch, type FetchHandler } from "../api/testHelpers";
 
 // Beim Turnier dauerte ein Upload 1-2 Sekunden. Genau dieses Fenster wird
 // hier nachgestellt - ein sofort auflösendes Mock würde die Race Condition
@@ -66,43 +63,24 @@ describe("leg cells", () => {
   });
 });
 
-const stubLocalStorage = () => {
-  const store = new Map<string, string>();
-  vi.stubGlobal("window", {
-    localStorage: {
-      getItem: (key: string) => store.get(key) ?? null,
-      setItem: (key: string, value: string) => {
-        store.set(key, value);
-      },
-      removeItem: (key: string) => {
-        store.delete(key);
-      },
-    },
-  });
-  return store;
-};
-
 // fetch, das erst nach UPLOAD_DELAY_MS antwortet - wie eine träge WLAN-
 // Verbindung am Board.
-const delayedFetch = (ok: boolean) =>
-  vi.fn(
-    () =>
-      new Promise((resolve, reject) => {
-        setTimeout(() => {
-          if (ok) {
-            resolve({ ok: true, json: async () => ({ files: {} }) } as unknown as Response);
-          } else {
-            reject(new TypeError("Failed to fetch"));
-          }
-        }, UPLOAD_DELAY_MS);
-      })
-  );
+const delayedFetch = (ok: boolean): FetchHandler => {
+  const routes = apiRoutes();
+  return (url, init) =>
+    new Promise((resolve, reject) => {
+      setTimeout(() => {
+        if (ok) resolve(routes(url, init));
+        else reject(new TypeError("Failed to fetch"));
+      }, UPLOAD_DELAY_MS);
+    });
+};
 
 const uploadOptions = () => ({
   enabled: true,
-  config: { token: "token", gistId: "gist-id" },
   boardId: "Board 1",
   state: finishedMatch(),
+  historyEntryId: null,
 });
 
 // Der Button, so wie er im Render-Baum landet.
@@ -168,12 +146,12 @@ describe("new match lock during a slow upload", () => {
   });
 
   it("keeps the button disabled for the whole time the upload promise is open", async () => {
-    stubLocalStorage();
-    vi.stubGlobal("fetch", delayedFetch(true));
+    loggedIn();
+    stubFetch(delayedFetch(true));
 
     let uploadState: UploadFlowState = IDLE_UPLOAD_STATE;
     expect(isNewMatchLocked(uploadState)).toBe(true);
-    const pending = runUploadFlow(uploadOptions(), (next) => {
+    const pending = runApiUploadFlow(uploadOptions(), (next) => {
       uploadState = next;
     });
 
@@ -187,7 +165,8 @@ describe("new match lock during a slow upload", () => {
     expect(uploadState.phase).toBe("pending");
     expect(renderStats(uploadState).markup).toContain("disabled");
 
-    // Der Upload liest den Gist und schreibt ihn - zwei verzögerte Requests.
+    // Der Upload erneuert das Token und schreibt das Ergebnis - zwei
+    // verzögerte Requests.
     await vi.advanceTimersByTimeAsync(UPLOAD_DELAY_MS);
     await pending;
 
@@ -197,11 +176,11 @@ describe("new match lock during a slow upload", () => {
   });
 
   it("ignores a click on the button while the upload promise is still open", async () => {
-    stubLocalStorage();
-    vi.stubGlobal("fetch", delayedFetch(true));
+    loggedIn();
+    stubFetch(delayedFetch(true));
 
     let uploadState: UploadFlowState = IDLE_UPLOAD_STATE;
-    const pending = runUploadFlow(uploadOptions(), (next) => {
+    const pending = runApiUploadFlow(uploadOptions(), (next) => {
       uploadState = next;
     });
 
@@ -221,11 +200,11 @@ describe("new match lock during a slow upload", () => {
   });
 
   it("stays locked after a slow upload fails, until the error is acknowledged", async () => {
-    stubLocalStorage();
-    vi.stubGlobal("fetch", delayedFetch(false));
+    loggedIn();
+    stubFetch(delayedFetch(false));
 
     let uploadState: UploadFlowState = IDLE_UPLOAD_STATE;
-    const pending = runUploadFlow(uploadOptions(), (next) => {
+    const pending = runApiUploadFlow(uploadOptions(), (next) => {
       uploadState = next;
     });
 

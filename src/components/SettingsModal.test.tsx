@@ -6,9 +6,7 @@ const render = (overrides: Partial<Parameters<typeof SettingsModal>[0]> = {}): s
   renderToStaticMarkup(
     <SettingsModal
       boardId="Board 3"
-      gistId="abc123"
       resultUploadEnabled
-      onTestConnection={vi.fn().mockResolvedValue("ok")}
       apiEmail={null}
       onApiLogin={vi.fn().mockResolvedValue({ ok: true, message: "ok" })}
       onApiLogout={vi.fn()}
@@ -22,13 +20,11 @@ const render = (overrides: Partial<Parameters<typeof SettingsModal>[0]> = {}): s
 const inputs = (markup: string): string[] => [...markup.matchAll(/<input[^>]*>/g)].map((m) => m[0]);
 
 describe("SettingsModal", () => {
-  it("hides the gist id behind a password field", () => {
-    const [boardInput, gistInput] = inputs(render());
+  it("has no gist settings any more", () => {
+    const markup = render();
 
-    expect(gistInput).toContain('type="password"');
-    expect(gistInput).toContain('value="abc123"');
-    // Der Board-Name ist nicht schützenswert und bleibt lesbar.
-    expect(boardInput).not.toContain('type="password"');
+    expect(markup).not.toContain("Gist");
+    expect(markup).not.toContain("Verbindung testen</button>");
   });
 
   it("offers a save button", () => {
@@ -36,17 +32,17 @@ describe("SettingsModal", () => {
   });
 
   it("prefills the fields from the stored settings", () => {
-    const markup = render({ boardId: "Board 7", gistId: "xyz", resultUploadEnabled: false });
-    const [boardInput, gistInput, uploadToggle] = inputs(markup);
+    const markup = render({ boardId: "Board 7", resultUploadEnabled: false });
+    const [boardInput, uploadToggle] = inputs(markup);
 
     expect(boardInput).toContain('value="Board 7"');
-    expect(gistInput).toContain('value="xyz"');
+    expect(boardInput).not.toContain('type="password"');
     expect(uploadToggle).not.toContain("checked");
   });
 
   it("offers the API login with e-mail and password while logged out", () => {
     const markup = render();
-    const [, , , emailInput, passwordInput] = inputs(markup);
+    const [, , emailInput, passwordInput] = inputs(markup);
 
     expect(markup).toContain("API");
     expect(emailInput).toContain('type="email"');

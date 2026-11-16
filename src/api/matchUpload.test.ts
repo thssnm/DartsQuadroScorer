@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createInitialState } from "../game/gameReducer";
 import { loadMatchHistory, type MatchHistoryEntry } from "../game/persistence";
 import type { GameState } from "../game/types";
-import { recordFinishedMatch } from "../gist/matchHistory";
 import { POCKETBASE_URL } from "./client";
+import { recordFinishedMatch } from "./matchHistory";
 import {
   describeApiUploadFailure,
   ensureApiHistoryFields,
@@ -15,7 +15,6 @@ import {
   apiRoutes,
   bodyOf,
   callsTo,
-  gistOk,
   json,
   loggedIn,
   stubFetch,
@@ -36,7 +35,7 @@ const finishedState = (): GameState => {
 
 // Legt wie beim Bestätigen des Matches den Historie-Eintrag samt matchId an.
 const recordMatch = (): string => {
-  const id = recordFinishedMatch(finishedState(), "Board 2", true);
+  const id = recordFinishedMatch(finishedState(), "Board 2");
   ensureApiHistoryFields(id);
   return id;
 };
@@ -71,7 +70,7 @@ describe("API upload of the finished match", () => {
   it("refreshes the token first and sends the result with the raw token", async () => {
     const store = loggedIn();
     const id = recordMatch();
-    const fetchMock = stubFetch(gistOk, apiRoutes());
+    const fetchMock = stubFetch(apiRoutes());
 
     const outcome = await uploadApiMatchResultOnce(options(id));
 
@@ -103,7 +102,7 @@ describe("API upload of the finished match", () => {
   it("adds both players best effort and ignores their errors", async () => {
     loggedIn();
     const id = recordMatch();
-    const fetchMock = stubFetch(gistOk, apiRoutes({ players: () => uniqueViolation() }));
+    const fetchMock = stubFetch(apiRoutes({ players: () => uniqueViolation() }));
 
     expect((await uploadApiMatchResultOnce(options(id))).result).toBe("uploaded");
     expect(callsTo(fetchMock, "/players/records").map(bodyOf)).toEqual([{ name: "Alice" }, { name: "Bob" }]);
@@ -111,7 +110,7 @@ describe("API upload of the finished match", () => {
 
   it("is skipped without a login - no request, no error", async () => {
     const store = stubLocalStorage();
-    const fetchMock = stubFetch(gistOk, apiRoutes());
+    const fetchMock = stubFetch(apiRoutes());
 
     expect(await uploadApiMatchResultOnce(options(null))).toEqual({ result: "skipped" });
     expect(fetchMock).not.toHaveBeenCalled();
@@ -120,7 +119,7 @@ describe("API upload of the finished match", () => {
 
   it("is skipped when result uploads are switched off", async () => {
     loggedIn();
-    const fetchMock = stubFetch(gistOk, apiRoutes());
+    const fetchMock = stubFetch(apiRoutes());
 
     expect((await uploadApiMatchResultOnce({ ...options(null), enabled: false })).result).toBe("skipped");
     expect(fetchMock).not.toHaveBeenCalled();
@@ -130,7 +129,6 @@ describe("API upload of the finished match", () => {
     const store = loggedIn();
     const id = recordMatch();
     const fetchMock = stubFetch(
-      gistOk,
       apiRoutes({ refresh: () => json({ code: 401, message: "The request requires valid record authorization token." }, 401) })
     );
 
@@ -146,7 +144,7 @@ describe("API upload of the finished match", () => {
   it("counts a unique violation on matchId as already uploaded", async () => {
     const store = loggedIn();
     const id = recordMatch();
-    stubFetch(gistOk, apiRoutes({ results: () => uniqueViolation() }));
+    stubFetch(apiRoutes({ results: () => uniqueViolation() }));
 
     expect((await uploadApiMatchResultOnce(options(id))).result).toBe("uploaded");
     expect(store.get(MATCH_UPLOADED_API_KEY)).toBe("true");
@@ -156,7 +154,7 @@ describe("API upload of the finished match", () => {
   it("treats any other 400 - also with empty data - as failed", async () => {
     const store = loggedIn();
     const id = recordMatch();
-    stubFetch(gistOk, apiRoutes({ results: () => json({ code: 400, message: "Failed to create record.", data: {} }, 400) }));
+    stubFetch(apiRoutes({ results: () => json({ code: 400, message: "Failed to create record.", data: {} }, 400) }));
 
     const outcome = await uploadApiMatchResultOnce(options(id));
 
@@ -167,7 +165,7 @@ describe("API upload of the finished match", () => {
 
   it("classifies a broken connection as a network error", async () => {
     loggedIn();
-    stubFetch(gistOk, () => {
+    stubFetch(() => {
       throw new TypeError("Failed to fetch");
     });
 
@@ -176,7 +174,7 @@ describe("API upload of the finished match", () => {
 
   it("does not upload twice once the API flag is set", async () => {
     loggedIn({ [MATCH_UPLOADED_API_KEY]: "true" });
-    const fetchMock = stubFetch(gistOk, apiRoutes());
+    const fetchMock = stubFetch(apiRoutes());
 
     expect((await uploadApiMatchResultOnce(options(null))).result).toBe("already-uploaded");
     expect(fetchMock).not.toHaveBeenCalled();
@@ -200,12 +198,12 @@ describe("matchId", () => {
     expect(matchId).toBeTypeOf("string");
 
     // Erster Versuch scheitert, der Retry geht durch.
-    const failing = stubFetch(gistOk, apiRoutes({ results: () => json({ message: "boom" }, 500) }));
+    const failing = stubFetch(apiRoutes({ results: () => json({ message: "boom" }, 500) }));
     await uploadApiMatchResultOnce(options(id));
-    const retrying = stubFetch(gistOk, apiRoutes());
+    const retrying = stubFetch(apiRoutes());
     await uploadApiMatchResultOnce(options(id));
     // Der Historie-Button schickt dieselbe ID noch einmal.
-    const fromHistory = stubFetch(gistOk, apiRoutes({ results: () => uniqueViolation() }));
+    const fromHistory = stubFetch(apiRoutes({ results: () => uniqueViolation() }));
     const outcome = await uploadHistoryEntryToApi(loadMatchHistory()[0]);
 
     expect(outcome.uploaded).toBe(true);
@@ -220,7 +218,7 @@ describe("matchId", () => {
     const id = recordMatch();
     const first = loadMatchHistory()[0].matchId;
 
-    expect(ensureApiHistoryFields(recordFinishedMatch(finishedState(), "Board 2", true))).toBe(first);
+    expect(ensureApiHistoryFields(recordFinishedMatch(finishedState(), "Board 2"))).toBe(first);
     expect(id).toBe(loadMatchHistory()[0].id);
   });
 
@@ -234,10 +232,9 @@ describe("matchId", () => {
       legsGuest: 0,
       highlights: [],
       updatedAt: "2026-09-01T18:00:00.000Z",
-      uploadStatus: "uploaded",
     };
     loggedIn({ [HISTORY_KEY]: JSON.stringify([oldEntry]) });
-    const failing = stubFetch(gistOk, apiRoutes({ results: () => json({ message: "boom" }, 500) }));
+    const failing = stubFetch(apiRoutes({ results: () => json({ message: "boom" }, 500) }));
 
     expect((await uploadHistoryEntryToApi(oldEntry)).uploaded).toBe(false);
     const stored = loadMatchHistory()[0];
@@ -247,7 +244,7 @@ describe("matchId", () => {
     // playedAt ist der ursprüngliche Zeitpunkt, nicht der des Uploads.
     expect(bodyOf(callsTo(failing, "/results/records")[0]).playedAt).toBe(oldEntry.updatedAt);
 
-    const retry = stubFetch(gistOk, apiRoutes());
+    const retry = stubFetch(apiRoutes());
     expect((await uploadHistoryEntryToApi(oldEntry)).uploaded).toBe(true);
     expect(bodyOf(callsTo(retry, "/results/records")[0]).matchId).toBe(stored.matchId);
     expect(loadMatchHistory()[0].apiUploadStatus).toBe("uploaded");
@@ -255,7 +252,7 @@ describe("matchId", () => {
 
   it("refuses a history upload without a login", async () => {
     stubLocalStorage();
-    const fetchMock = stubFetch(gistOk, apiRoutes());
+    const fetchMock = stubFetch(apiRoutes());
 
     expect(await uploadHistoryEntryToApi({ id: "x" } as MatchHistoryEntry)).toMatchObject({
       uploaded: false,

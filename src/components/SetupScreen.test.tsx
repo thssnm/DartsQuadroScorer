@@ -24,7 +24,7 @@ describe("PlayerNameField", () => {
 describe("SetupScreen", () => {
   it("renders the Love for Darts sponsor link before the setup content", () => {
     const markup = renderToStaticMarkup(
-      <SetupScreen onStart={vi.fn()} resultUploadEnabled={false} gistConfig={{ token: "", gistId: "" }} />
+      <SetupScreen onStart={vi.fn()} resultUploadEnabled={false} />
     );
 
     expect(markup).toContain('class="setup-sponsor"');

@@ -6,7 +6,7 @@ import {
   saveLiveScoreSession,
 } from "../game/persistence";
 import type { GameState } from "../game/types";
-import { createMatchFileId, defaultBoardName } from "../gist/api";
+import { createMatchId, defaultBoardName } from "../api/matchResult";
 import { createLiveRecord, findLiveRecordId, refreshLiveToken, updateLiveRecord } from "./client";
 import { buildLiveSnapshot, sameSnapshot, type LiveSnapshot } from "./snapshot";
 
@@ -135,7 +135,7 @@ export class LiveScoreSender {
     if (!session) {
       // Ein bereits abgeschlossenes Match bekommt keine neue liveMatchId.
       if (finished) return;
-      session = { matchId: createMatchFileId() };
+      session = { matchId: createMatchId() };
       saveLiveScoreSession(session);
     }
 

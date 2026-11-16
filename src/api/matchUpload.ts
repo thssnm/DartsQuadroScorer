@@ -11,9 +11,8 @@ import {
   type MatchHistoryApiStatus,
   type MatchHistoryEntry,
 } from "../game/persistence";
-import { createMatchFileId, defaultBoardName, mapGameStateToBoardFile } from "../gist/api";
-import type { MatchUploadOutcome, UploadFailure } from "../gist/matchUpload";
-import type { UploadFlowState } from "../gist/uploadFlow";
+import { createMatchId, defaultBoardName, mapGameStateToResult, type MatchResult } from "./matchResult";
+import type { MatchUploadOutcome, UploadFailure, UploadFlowState } from "./uploadFlow";
 import {
   ApiHttpError,
   addPlayersBestEffort,
@@ -22,8 +21,8 @@ import {
   refreshAuth,
 } from "./client";
 
-// Gleiche Einteilung wie beim Gist: network = fetch kam nicht durch,
-// http = die API hat abgelehnt.
+// network = fetch kam nicht durch (der typische WLAN-Abbruch), http = die
+// API hat abgelehnt.
 export const classifyApiUploadError = (error: unknown): UploadFailure => {
   if (error instanceof ApiHttpError) {
     return { kind: "http", status: error.status, message: error.message };
@@ -50,18 +49,14 @@ export const describeApiUploadFailure = (failure: UploadFailure): string => {
   }
 };
 
-// Die Felder, die Historie-Eintrag und Gist-Datei gemeinsam haben.
-export type ApiResultSource = Pick<
-  MatchHistoryEntry,
-  "boardName" | "home" | "guest" | "legsHome" | "legsGuest" | "averageHome" | "averageGuest" | "highlights" | "updatedAt"
->;
+export type ApiResultSource = MatchResult;
 
 const findHistoryEntry = (id: string): MatchHistoryEntry | undefined =>
   loadMatchHistory().find((entry) => entry.id === id);
 
 // Hat der Livescore-Sender für das laufende Match schon eine matchId
 // vergeben, bekommt das Ergebnis dieselbe. Ohne Sender: neue UUID wie bisher.
-const newMatchIdForCurrentMatch = (): string => loadLiveScoreSession()?.matchId ?? createMatchFileId();
+const newMatchIdForCurrentMatch = (): string => loadLiveScoreSession()?.matchId ?? createMatchId();
 
 // Ergänzt einen Historie-Eintrag um die API-Felder. Idempotent: eine schon
 // vergebene matchId und ein schon gesetzter Status bleiben stehen - sonst
@@ -72,11 +67,11 @@ export const ensureApiHistoryFields = (
   initialStatus: MatchHistoryApiStatus = "not-uploaded"
 ): string => {
   const entry = findHistoryEntry(id);
-  if (!entry) return createMatchFileId();
+  if (!entry) return createMatchId();
   // Die liveMatchId nur für den Eintrag des laufenden Matches - nie für ein
   // altes Ergebnis aus der Historie.
   const matchId =
-    entry.matchId ?? (id === loadCurrentMatchHistoryId() ? newMatchIdForCurrentMatch() : createMatchFileId());
+    entry.matchId ?? (id === loadCurrentMatchHistoryId() ? newMatchIdForCurrentMatch() : createMatchId());
   if (!entry.matchId || !entry.apiUploadStatus) {
     updateMatchHistoryEntry(id, { matchId, apiUploadStatus: entry.apiUploadStatus ?? initialStatus });
   }
@@ -123,7 +118,10 @@ interface ApiMatchUploadOptions {
   historyEntryId: string | null;
 }
 
-// Gegenstück zu uploadMatchResultOnce mit eigenem Merker [match-uploaded-api].
+// Lädt das Ergebnis höchstens einmal pro Match hoch. Der Merker
+// [match-uploaded-api] liegt im localStorage, greift also auch nach einem
+// Reload. Gesetzt wird er nur nach einem erfolgreichen Upload - ein
+// fehlgeschlagener Versuch (Netzwerk, Token) bleibt wiederholbar.
 export const uploadApiMatchResultOnce = async ({
   enabled,
   boardId,
@@ -135,7 +133,7 @@ export const uploadApiMatchResultOnce = async ({
 
   const entry = historyEntryId ? findHistoryEntry(historyEntryId) : undefined;
   const matchId = historyEntryId ? ensureApiHistoryFields(historyEntryId) : newMatchIdForCurrentMatch();
-  const source = entry ?? mapGameStateToBoardFile(state, defaultBoardName(boardId));
+  const source = entry ?? mapGameStateToResult(state, defaultBoardName(boardId));
 
   const outcome = await uploadResult(source, matchId);
   if (outcome.result === "uploaded") {
@@ -145,7 +143,10 @@ export const uploadApiMatchResultOnce = async ({
   return outcome;
 };
 
-// Wie runUploadFlow beim Gist: "pending" synchron, dann das Ergebnis.
+// Führt einen Upload-Versuch aus und meldet jeden Zustandswechsel. "pending"
+// wird synchron gemeldet, bevor der Request überhaupt startet - zwischen dem
+// Klick auf "Weiter zur Statistik" und der Sperre liegt damit kein Moment,
+// in dem "Neues Match" offen wäre.
 export const runApiUploadFlow = async (
   options: ApiMatchUploadOptions,
   onState: (state: UploadFlowState) => void

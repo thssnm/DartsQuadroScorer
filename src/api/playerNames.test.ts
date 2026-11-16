@@ -1,50 +1,55 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { loadAllSetupPlayerNames } from "./playerNames";
-import { json, stubFetch, stubLocalStorage } from "./testHelpers";
-
-const gistConfig = { token: "token", gistId: "gist-id" };
-
-const gistPlayers = (players: string[]) => () =>
-  json({ files: { "players.json": { content: JSON.stringify({ players }) } } });
+import { loadSetupPlayerNames } from "./playerNames";
+import { json, loggedIn, stubFetch, stubLocalStorage } from "./testHelpers";
 
 const apiPlayers = (names: string[]) => (url: string) => {
   if (!url.includes("/api/collections/players/records") || !url.includes("perPage=500")) throw new Error(url);
   return json({ items: names.map((name) => ({ name })) });
 };
 
-describe("loadAllSetupPlayerNames", () => {
+describe("loadSetupPlayerNames", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it("merges both sources without duplicates in alphabetical order", async () => {
+  it("returns the names without duplicates in alphabetical order", async () => {
     stubLocalStorage();
-    stubFetch(gistPlayers(["Chris", "Alice"]), apiPlayers(["Bob", "Alice", "Dana"]));
+    stubFetch(apiPlayers(["Chris", "Alice", "Bob", "Alice"]));
 
-    await expect(loadAllSetupPlayerNames(true, gistConfig)).resolves.toEqual(["Alice", "Bob", "Chris", "Dana"]);
+    await expect(loadSetupPlayerNames(true)).resolves.toEqual(["Alice", "Bob", "Chris"]);
   });
 
-  it("keeps the gist names when the API fails", async () => {
-    stubLocalStorage();
-    stubFetch(gistPlayers(["Chris", "Alice"]), () => json({ message: "down" }, 500));
+  it("sends the stored token when logged in", async () => {
+    loggedIn();
+    const fetchMock = stubFetch(apiPlayers(["Bob"]));
 
-    await expect(loadAllSetupPlayerNames(true, gistConfig)).resolves.toEqual(["Alice", "Chris"]);
+    await loadSetupPlayerNames(true);
+
+    const [[, init]] = fetchMock.mock.calls;
+    expect((init.headers as Record<string, string>).Authorization).toBe("old-token");
   });
 
-  it("keeps the API names when the gist is unreachable", async () => {
+  it("leaves the list empty when the API fails", async () => {
+    stubLocalStorage();
+    stubFetch(() => json({ message: "down" }, 500));
+
+    await expect(loadSetupPlayerNames(true)).resolves.toEqual([]);
+  });
+
+  it("leaves the list empty when the API is unreachable", async () => {
     stubLocalStorage();
     stubFetch(() => {
       throw new TypeError("Failed to fetch");
-    }, apiPlayers(["Bob"]));
+    });
 
-    await expect(loadAllSetupPlayerNames(true, gistConfig)).resolves.toEqual(["Bob"]);
+    await expect(loadSetupPlayerNames(true)).resolves.toEqual([]);
   });
 
-  it("does not ask either source while uploads are switched off", async () => {
+  it("does not ask the API while uploads are switched off", async () => {
     stubLocalStorage();
-    const fetchMock = stubFetch(gistPlayers(["Alice"]), apiPlayers(["Bob"]));
+    const fetchMock = stubFetch(apiPlayers(["Bob"]));
 
-    await expect(loadAllSetupPlayerNames(false, gistConfig)).resolves.toEqual([]);
+    await expect(loadSetupPlayerNames(false)).resolves.toEqual([]);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

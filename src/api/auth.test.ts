@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { loginToApi, logoutFromApi, testApiConnection } from "./auth";
-import { API_EMAIL_KEY, API_TOKEN_KEY, apiRoutes, bodyOf, gistOk, json, loggedIn, stubFetch, stubLocalStorage } from "./testHelpers";
+import { API_EMAIL_KEY, API_TOKEN_KEY, apiRoutes, bodyOf, json, loggedIn, stubFetch, stubLocalStorage } from "./testHelpers";
 
 const loginRoute = (url: string) => {
   if (!url.endsWith("/api/collections/users/auth-with-password")) throw new Error(url);
@@ -14,7 +14,7 @@ describe("API login", () => {
 
   it("stores token and e-mail but never the password", async () => {
     const store = stubLocalStorage();
-    const fetchMock = stubFetch(gistOk, loginRoute);
+    const fetchMock = stubFetch(loginRoute);
 
     const result = await loginToApi(" board@example.com ", "geheim-123");
 
@@ -30,7 +30,7 @@ describe("API login", () => {
 
   it("stores nothing when the credentials are rejected", async () => {
     const store = stubLocalStorage();
-    stubFetch(gistOk, () => json({ code: 400, message: "Failed to authenticate.", data: {} }, 400));
+    stubFetch(() => json({ code: 400, message: "Failed to authenticate.", data: {} }, 400));
 
     const result = await loginToApi("board@example.com", "falsch");
 
@@ -54,7 +54,7 @@ describe("API connection test", () => {
 
   it("reports the logged-in user and keeps the refreshed token", async () => {
     const store = loggedIn();
-    stubFetch(gistOk, apiRoutes());
+    stubFetch(apiRoutes());
 
     expect(await testApiConnection()).toMatchObject({ ok: true, message: "Verbunden als board@example.com" });
     expect(store.get(API_TOKEN_KEY)).toBe("new-token");
@@ -62,7 +62,7 @@ describe("API connection test", () => {
 
   it("reports an expired token", async () => {
     loggedIn();
-    stubFetch(gistOk, apiRoutes({ refresh: () => json({ message: "unauthorized" }, 401) }));
+    stubFetch(apiRoutes({ refresh: () => json({ message: "unauthorized" }, 401) }));
 
     const result = await testApiConnection();
 

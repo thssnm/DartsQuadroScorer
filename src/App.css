@@ -961,7 +961,6 @@ body {
   color: var(--text-dim);
 }
 
-.match-history__upload,
 .match-history__api-upload {
   padding: 8px 18px;
   background: var(--red);
@@ -972,7 +971,6 @@ body {
   cursor: pointer;
 }
 
-.match-history__upload:disabled,
 .match-history__api-upload:disabled {
   opacity: 0.55;
   cursor: not-allowed;
@@ -1054,14 +1052,13 @@ body {
   opacity: 0.8;
 }
 
-.gist-status,
-.gist-toast,
-.match-stats__gist-status {
+.upload-toast,
+.match-stats__upload-status {
   color: var(--text-dim);
   font-size: 0.85rem;
 }
 
-.gist-toast {
+.upload-toast {
   position: fixed;
   right: 16px;
   bottom: 16px;
@@ -1091,7 +1088,7 @@ body {
   margin-bottom: 24px;
 }
 
-.match-stats__gist-status {
+.match-stats__upload-status {
   margin: -12px 0 24px;
   text-align: center;
 }

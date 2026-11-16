@@ -30,8 +30,6 @@ export const json = (body: unknown, status = 200): Response =>
 
 export type FetchHandler = (url: string, init: RequestInit) => Response | Promise<Response>;
 
-export const gistOk: FetchHandler = () => json({ files: {} });
-
 export const refreshOk: FetchHandler = () =>
   json({ token: "new-token", record: { email: "board@example.com" } });
 
@@ -50,11 +48,8 @@ export const apiRoutes = ({ refresh = refreshOk, results, players }: ApiHandlers
     throw new Error(`Unerwartete API-URL: ${url}`);
   };
 
-export const stubFetch = (gist: FetchHandler, api: FetchHandler) => {
-  const fetchMock = vi.fn(async (input: RequestInfo | URL, init: RequestInit = {}) => {
-    const url = String(input);
-    return url.startsWith("https://api.github.com") ? gist(url, init) : api(url, init);
-  });
+export const stubFetch = (api: FetchHandler) => {
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init: RequestInit = {}) => api(String(input), init));
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
 };

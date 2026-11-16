@@ -2,19 +2,16 @@ import { useEffect, useState } from "react";
 
 export interface Settings {
   boardId: string;
-  gistId: string;
   resultUploadEnabled: boolean;
   liveScoreEnabled: boolean;
 }
 
 interface SettingsModalProps {
   boardId: string;
-  gistId: string;
   resultUploadEnabled: boolean;
   liveScoreEnabled?: boolean;
   // Statuszeile des Livescore-Senders, null = noch nichts gesendet.
   liveScoreStatus?: string | null;
-  onTestConnection: (gistId: string) => Promise<string>;
   // E-Mail der API-Anmeldung, null = nicht angemeldet.
   apiEmail: string | null;
   // Liefert die Meldung für den Nutzer; ok = Anmeldung gespeichert.
@@ -27,11 +24,9 @@ interface SettingsModalProps {
 
 export const SettingsModal = ({
   boardId,
-  gistId,
   resultUploadEnabled,
   liveScoreEnabled = false,
   liveScoreStatus = null,
-  onTestConnection,
   apiEmail,
   onApiLogin,
   onApiLogout,
@@ -41,13 +36,10 @@ export const SettingsModal = ({
 }: SettingsModalProps) => {
   // Die Eingaben werden erst mit "Speichern" übernommen. Vorher lagen sie
   // bei jedem Tastendruck im localStorage - ein halb getippter Wert hätte
-  // die Gist-Anbindung mitten im Turnier unbrauchbar gemacht.
+  // den Board-Namen mitten im Turnier verfälscht.
   const [draftBoardId, setDraftBoardId] = useState(boardId);
-  const [draftGistId, setDraftGistId] = useState(gistId);
   const [draftUploadEnabled, setDraftUploadEnabled] = useState(resultUploadEnabled);
   const [draftLiveScoreEnabled, setDraftLiveScoreEnabled] = useState(liveScoreEnabled);
-  const [connectionStatus, setConnectionStatus] = useState<string | null>(null);
-  const [testingConnection, setTestingConnection] = useState(false);
   const [loginEmail, setLoginEmail] = useState(apiEmail ?? "");
   const [loginPassword, setLoginPassword] = useState("");
   const [apiStatus, setApiStatus] = useState<string | null>(null);
@@ -60,18 +52,6 @@ export const SettingsModal = ({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
-
-  const handleTestConnection = () => {
-    setTestingConnection(true);
-    setConnectionStatus(null);
-    // Getestet wird die gerade eingetippte Gist-ID, nicht die gespeicherte.
-    void onTestConnection(draftGistId)
-      .then(setConnectionStatus)
-      .catch((error: unknown) =>
-        setConnectionStatus(error instanceof Error ? error.message : "Verbindung fehlgeschlagen")
-      )
-      .finally(() => setTestingConnection(false));
-  };
 
   // Die Anmeldung wirkt sofort, unabhängig von "Speichern".
   const handleApiLogin = () => {
@@ -100,7 +80,6 @@ export const SettingsModal = ({
   const handleSave = () => {
     onSave({
       boardId: draftBoardId,
-      gistId: draftGistId,
       resultUploadEnabled: draftUploadEnabled,
       liveScoreEnabled: draftLiveScoreEnabled,
     });
@@ -131,28 +110,6 @@ export const SettingsModal = ({
             autoFocus
           />
         </label>
-        <label className="settings-modal__field">
-          <span>Gist-ID</span>
-          {/* Verdeckt, damit die ID am Board nicht abgelesen oder abfotografiert
-              werden kann - sonst ließen sich von fremden Geräten Ergebnisse in
-              denselben Gist schreiben. */}
-          <input
-            type="password"
-            value={draftGistId}
-            onChange={(event) => setDraftGistId(event.target.value)}
-            placeholder="Gist-ID eingeben"
-            autoComplete="off"
-          />
-        </label>
-        <button
-          type="button"
-          className="settings-modal__test"
-          onClick={handleTestConnection}
-          disabled={testingConnection}
-        >
-          {testingConnection ? "Verbindung wird getestet …" : "Verbindung testen"}
-        </button>
-        {connectionStatus && <p className="settings-modal__status">{connectionStatus}</p>}
         <label className="settings-modal__toggle">
           <input
             type="checkbox"

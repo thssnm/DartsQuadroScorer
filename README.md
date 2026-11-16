@@ -7,18 +7,9 @@
 
 Voraussetzung: Node.js (empfohlen: Version 20 oder neuer).
 
-Für den Gist-Upload lokal eine `.env` nach Vorlage von `.env.example` anlegen:
-
-```bash
-VITE_GITHUB_TOKEN=
-```
-
-Die `.env` nicht committen. Beim Vercel-Deploy denselben Wert als
-Projekt-Umgebungsvariable in den Vercel-Projekteinstellungen hinterlegen. Die
-Gist-ID wird in den App-Einstellungen am Board eingetragen.
-
-Optional lässt sich mit `VITE_POCKETBASE_URL` ein anderer Server für das
-API-Ziel setzen (Default: `https://api.thssn.dev`).
+Optional lässt sich in einer `.env` (Vorlage: `.env.example`) mit
+`VITE_POCKETBASE_URL` ein anderer Server für den Ergebnis-Upload setzen
+(Default: `https://api.thssn.dev`). Die `.env` nicht committen.
 
 ```bash
 npm install
@@ -59,24 +50,20 @@ installieren, statt jedes Mal `npm run dev` zu starten.
   Double als letzten Dart).
 - **Rücktaste:** Letzten eingegebenen Dart der aktuellen Aufnahme löschen.
 
-## Ergebnis-Upload (Gist und API)
+## Ergebnis-Upload (API)
 
-Ein bestätigtes Match ("Weiter zur Statistik") wird parallel an zwei Ziele
-geschickt, wenn in den Einstellungen "Ergebnis-Upload aktivieren" an ist:
+Ein bestätigtes Match ("Weiter zur Statistik") wird an die PocketBase-API
+geschickt, wenn in den Einstellungen "Ergebnis-Upload aktivieren" an ist und
+das Board im Bereich "API" angemeldet ist (E-Mail + Passwort, gespeichert
+wird nur das Token). Ohne Anmeldung wird der Upload still übersprungen.
 
-- **Gist:** wie bisher, für das Dashboard.
-- **API (PocketBase):** zusätzlich, nur wenn das Board im Bereich "API" der
-  Einstellungen angemeldet ist (E-Mail + Passwort, gespeichert wird nur das
-  Token). Ohne Anmeldung wird die API still übersprungen.
+"Neues Match" bleibt gesperrt, bis der Upload fertig ist. Schlägt er fehl,
+erscheint das Fehler-Popup mit "Upload erneut versuchen". Ein
+fehlgeschlagener Upload wird beim nächsten Start der App erneut versucht.
 
-"Neues Match" bleibt gesperrt, bis beide Ziele fertig sind. Schlägt ein Ziel
-fehl, erscheint das Fehler-Popup; "Upload erneut versuchen" wiederholt nur das
-fehlgeschlagene Ziel. Ein fehlgeschlagener Upload wird beim nächsten Start
-der App erneut versucht.
-
-In der Match-Historie (☰) steht pro Match der Status für Gist und API; beide
-lassen sich dort nachträglich hochladen ("Upload" bzw. "Upload zur API").
-Die Spieler-Auswahl im Setup lädt Namen aus beiden Quellen.
+In der Match-Historie (☰) steht pro Match der Upload-Status; ein nicht
+übertragenes Ergebnis lässt sich dort nachträglich hochladen. Die
+Spieler-Auswahl im Setup lädt die Namen aus der API.
 
 ## Livescore
 

@@ -2,14 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_BOARD_ID,
   loadBoardId,
-  loadGistId,
   loadMatchConfirmed,
-  loadMatchUploaded,
   loadResultUploadEnabled,
   saveBoardId,
-  saveGistId,
   saveMatchConfirmed,
-  saveMatchUploaded,
   saveResultUploadEnabled,
 } from "./persistence";
 
@@ -55,33 +51,6 @@ describe("board id persistence", () => {
   });
 });
 
-describe("gist id persistence", () => {
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
-  it("falls back to an empty gist id when none is stored", () => {
-    stubLocalStorage();
-
-    expect(loadGistId()).toBe("");
-  });
-
-  it("loads a stored gist id", () => {
-    stubLocalStorage({ "darts-quadro-scorer:gist-id": "gist-123" });
-
-    expect(loadGistId()).toBe("gist-123");
-  });
-
-  it("saves a trimmed gist id", () => {
-    const localStorage = stubLocalStorage();
-
-    saveGistId(" gist-456 ");
-
-    expect(localStorage.setItem).toHaveBeenCalledWith("darts-quadro-scorer:gist-id", "gist-456");
-    expect(loadGistId()).toBe("gist-456");
-  });
-});
-
 describe("result upload enabled persistence", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -112,31 +81,6 @@ describe("result upload enabled persistence", () => {
   });
 });
 
-describe("match uploaded persistence", () => {
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
-  it("defaults to not uploaded", () => {
-    stubLocalStorage();
-
-    expect(loadMatchUploaded()).toBe(false);
-  });
-
-  it("loads a stored upload marker", () => {
-    stubLocalStorage({ "darts-quadro-scorer:match-uploaded": "true" });
-
-    expect(loadMatchUploaded()).toBe(true);
-  });
-
-  it("clears the marker for a new match", () => {
-    stubLocalStorage({ "darts-quadro-scorer:match-uploaded": "true" });
-
-    saveMatchUploaded(false);
-
-    expect(loadMatchUploaded()).toBe(false);
-  });
-});
 
 describe("match confirmed persistence", () => {
   afterEach(() => {

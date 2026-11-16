@@ -6,14 +6,11 @@ import {
   clearGameState,
   isResumableState,
   loadBoardId,
-  loadGistId,
   loadResultUploadEnabled,
   saveBoardId,
-  saveGistId,
   saveResultUploadEnabled,
   loadMatchConfirmed,
   saveMatchConfirmed,
-  saveMatchUploaded,
   saveMatchUploadedApi,
   loadApiAuth,
   loadLiveScoreEnabled,
@@ -30,26 +27,24 @@ import { SettingsModal, type Settings } from "./components/SettingsModal";
 import { MatchHistoryModal } from "./components/MatchHistoryModal";
 import { ResultOverlay } from "./components/ResultOverlay";
 import { UploadErrorPopup } from "./components/UploadErrorPopup";
-import { loadGistConfig } from "./gist/config";
-import { testGistConnection } from "./gist/api";
-import { describeUploadFailure } from "./gist/matchUpload";
-import { recordFinishedMatch, setMatchHistoryStatus, uploadHistoryEntry } from "./gist/matchHistory";
+import { recordFinishedMatch } from "./api/matchHistory";
 import { loginToApi, logoutFromApi, testApiConnection } from "./api/auth";
-import { describeApiUploadFailure, ensureApiHistoryFields, uploadHistoryEntryToApi } from "./api/matchUpload";
 import {
-  IDLE_TARGETS_STATE,
-  PENDING_TARGETS_STATE,
-  UPLOAD_TARGETS,
-  acknowledgeUploadFailures,
-  applyTargetState,
-  failedTargets,
-  isNewMatchLockedForTargets,
+  describeApiUploadFailure,
+  ensureApiHistoryFields,
+  runApiUploadFlow,
+  uploadHistoryEntryToApi,
+} from "./api/matchUpload";
+import {
+  IDLE_UPLOAD_STATE,
+  PENDING_UPLOAD_STATE,
+  acknowledgeUploadFailure,
+  applyUploadState,
+  isNewMatchLocked,
   isUploadPopupVisible,
   isUploadRetrying,
-  runMatchUploadTargets,
-  type UploadTarget,
-  type UploadTargetsState,
-} from "./api/uploadTargets";
+  type UploadFlowState,
+} from "./api/uploadFlow";
 import { useLiveScore } from "./live/useLiveScore";
 import { describeLiveSendStatus } from "./live/sender";
 import type { GameState } from "./game/types";
@@ -70,7 +65,6 @@ function App() {
   // geht es direkt zur Statistik, nicht zurück ins Match-Ende-Popup.
   const [showMatchStats, setShowMatchStats] = useState(() => loadMatchConfirmed());
   const [boardId, setBoardId] = useState(() => loadBoardId());
-  const [gistId, setGistId] = useState(() => loadGistId());
   const [resultUploadEnabled, setResultUploadEnabled] = useState(() => loadResultUploadEnabled());
   const [apiAuth, setApiAuth] = useState(() => loadApiAuth());
   const [liveScoreEnabled, setLiveScoreEnabled] = useState(() => loadLiveScoreEnabled());
@@ -80,24 +74,24 @@ function App() {
   // ID des Historie-Eintrags zum laufenden Match, um dessen Status nach dem
   // Upload-Versuch nachzuziehen.
   const historyEntryId = useRef<string | null>(null);
-  const [gistStatus, setGistStatus] = useState<string | null>(null);
-  // Zustand beider Upload-Ziele (Gist, API) für das bestätigte Match. "Neues
-  // Match" bleibt gesperrt, solange eines davon "pending" oder "failed" ist -
-  // erst Erfolg, Überspringen oder ein quittierter Fehler gibt den Button
-  // frei. Ein schon bestätigtes Match startet nach einem Reload direkt in
-  // "pending", damit der Button nicht für einen Frame klickbar ist.
-  const [uploadState, setUploadState] = useState<UploadTargetsState>(() =>
-    loadMatchConfirmed() && state.phase === "match-finished" ? PENDING_TARGETS_STATE : IDLE_TARGETS_STATE
+  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
+  // Zustand des Ergebnis-Uploads für das bestätigte Match. "Neues Match"
+  // bleibt gesperrt, solange er "pending" oder "failed" ist - erst Erfolg,
+  // Überspringen oder ein quittierter Fehler gibt den Button frei. Ein schon
+  // bestätigtes Match startet nach einem Reload direkt in "pending", damit
+  // der Button nicht für einen Frame klickbar ist.
+  const [uploadState, setUploadState] = useState<UploadFlowState>(() =>
+    loadMatchConfirmed() && state.phase === "match-finished" ? PENDING_UPLOAD_STATE : IDLE_UPLOAD_STATE
   );
-  // Der Button hängt am Zustand der Upload-Promises, nicht an einer Dauer.
-  const newMatchLocked = isNewMatchLockedForTargets(uploadState);
+  // Der Button hängt am Zustand des Upload-Promise, nicht an einer Dauer.
+  const newMatchLocked = isNewMatchLocked(uploadState);
   const matchFinished = state.phase === "match-finished";
   // Das Match gilt erst als abgeschlossen, wenn der Nutzer das Match-Ende-
   // Popup mit "Weiter" bestätigt hat - vorher kann er es noch zurücknehmen.
   const matchConfirmed = matchFinished && showMatchStats;
   // Beim Start bewusst false: ist ein bereits bestätigtes Match noch nicht
   // hochgeladen (fehlgeschlagener Versuch), bekommt es nach einem Reload
-  // eine neue Chance. Doppelte Uploads verhindert uploadMatchResultOnce.
+  // eine neue Chance. Doppelte Uploads verhindert uploadApiMatchResultOnce.
   const previousMatchConfirmed = useRef(false);
 
   // Läuft ein Spiel (nicht mehr im Setup), wird jede Änderung sofort
@@ -110,7 +104,6 @@ function App() {
       // Beide Merker gehören zum gespeicherten Match - mit dem Match
       // verfallen sie, damit das nächste Ergebnis wieder hochgeladen wird.
       saveMatchConfirmed(false);
-      saveMatchUploaded(false);
       saveMatchUploadedApi(false);
       // Der Eintrag selbst bleibt in der Historie, nur die Zuordnung zum
       // laufenden Match verfällt.
@@ -123,45 +116,34 @@ function App() {
 
   // Ein Upload-Versuch mit den Daten des laufenden Matches - sowohl der
   // automatische nach dem Bestätigen als auch jeder Klick auf "Upload erneut
-  // versuchen". Wiederholt wird nur der Request, der Match-Zustand bleibt -
-  // und nur für die übergebenen Ziele.
-  const runMatchUpload = useCallback((targets: UploadTarget[]) => {
-    if (targets.includes("gist")) setGistStatus("Ergebnis wird hochgeladen …");
-    void runMatchUploadTargets(
-      targets,
+  // versuchen". Wiederholt wird nur der Request, der Match-Zustand bleibt.
+  const runMatchUpload = useCallback(() => {
+    // Ohne Schalter oder Anmeldung wird der Upload übersprungen - dann
+    // auch keine Meldung, die einen Upload vortäuscht.
+    const uploadActive = resultUploadEnabled && loadApiAuth() !== null;
+    if (uploadActive) setUploadMessage("Ergebnis wird hochgeladen …");
+    void runApiUploadFlow(
       {
         enabled: resultUploadEnabled,
-        gistConfig: loadGistConfig(gistId),
         boardId,
         state,
         historyEntryId: historyEntryId.current,
       },
-      (target, next) => {
-        setUploadState((previous) => applyTargetState(previous, target, next));
-        // Status, Toast und Historie des API-Ziels pflegt dessen Modul.
-        if (target === "api") {
-          // Ein Refresh kann ein neues Token gespeichert haben.
-          if (next.phase !== "pending") setApiAuth(loadApiAuth());
-          return;
-        }
-        if (next.phase === "failed") setGistStatus(null);
-        // "done" bei abgeschaltetem Upload heißt "übersprungen": weder eine
-        // Erfolgsmeldung noch ein Statuswechsel in der Historie.
-        if (next.phase === "done") {
-          setGistStatus(resultUploadEnabled ? "Ergebnis in Gist hochgeladen." : null);
-          if (resultUploadEnabled && historyEntryId.current) {
-            setMatchHistoryStatus(historyEntryId.current, "uploaded");
-          }
-        }
+      (next) => {
+        setUploadState((previous) => applyUploadState(previous, next));
+        if (next.phase === "pending") return;
+        // Ein Refresh kann ein neues Token gespeichert haben.
+        setApiAuth(loadApiAuth());
+        setUploadMessage(next.phase === "done" && uploadActive ? "Ergebnis hochgeladen." : null);
       }
     );
-  }, [boardId, gistId, resultUploadEnabled, state]);
+  }, [boardId, resultUploadEnabled, state]);
 
   // Hochgeladen wird erst nach dem Bestätigen des Match-Ende-Popups: ein
   // über "Rückgängig" zurückgenommenes Match darf nicht im Turniersystem
   // landen. Dass dabei pro Match nur ein einziger erfolgreicher Upload
   // herauskommt - auch wenn das Popup nach einem Reload erneut bestätigt
-  // wird - stellt uploadMatchResultOnce sicher.
+  // wird - stellt uploadApiMatchResultOnce sicher.
   useEffect(() => {
     const changedToMatchConfirmed = !previousMatchConfirmed.current && matchConfirmed;
     previousMatchConfirmed.current = matchConfirmed;
@@ -171,14 +153,14 @@ function App() {
     // Lokale Kopie des Ergebnisses - unabhängig vom Upload-Schalter und vom
     // Ausgang des Uploads. Ein zweiter Durchlauf (Reload) legt keinen
     // weiteren Eintrag an.
-    historyEntryId.current = recordFinishedMatch(state, boardId, resultUploadEnabled);
-    // matchId und API-Status einmalig am Eintrag festhalten; ein Reload
+    historyEntryId.current = recordFinishedMatch(state, boardId);
+    // matchId und Upload-Status einmalig am Eintrag festhalten; ein Reload
     // behält beides.
     ensureApiHistoryFields(
       historyEntryId.current,
       !resultUploadEnabled ? "upload-disabled" : loadApiAuth() ? "not-uploaded" : "not-logged-in"
     );
-    runMatchUpload(UPLOAD_TARGETS);
+    runMatchUpload();
   }, [boardId, matchConfirmed, resultUploadEnabled, runMatchUpload, state]);
 
   // Livescore: reiner Beobachter, nach dem Upload-Effekt aufgerufen, damit
@@ -196,8 +178,6 @@ function App() {
   const saveSettings = (settings: Settings) => {
     setBoardId(settings.boardId);
     saveBoardId(settings.boardId);
-    setGistId(settings.gistId);
-    saveGistId(settings.gistId);
     setResultUploadEnabled(settings.resultUploadEnabled);
     saveResultUploadEnabled(settings.resultUploadEnabled);
     setLiveScoreEnabled(settings.liveScoreEnabled);
@@ -240,16 +220,10 @@ function App() {
   const settingsModal = settingsOpen ? (
     <SettingsModal
       boardId={boardId}
-      gistId={gistId}
       resultUploadEnabled={resultUploadEnabled}
       liveScoreEnabled={liveScoreEnabled}
       liveScoreStatus={describeLiveSendStatus(liveScoreStatus)}
       onSave={saveSettings}
-      onTestConnection={(testGistId) =>
-        testGistConnection(loadGistConfig(testGistId)).then((result) =>
-          result.ok ? `✓ ${result.message}` : `Verbindung fehlgeschlagen: ${result.message}`
-        )
-      }
       apiEmail={apiAuth ? apiAuth.email : null}
       onApiLogin={(email, password) =>
         loginToApi(email, password).then((result) => {
@@ -275,22 +249,15 @@ function App() {
   // "pending" bei bereits bekanntem Fehler), damit der Nutzer sieht, dass
   // etwas passiert.
   const uploadPopupVisible = isUploadPopupVisible(uploadState);
-  const uploadFailedTargets = failedTargets(uploadState);
   const historyModal = historyOpen ? (
     <MatchHistoryModal
       entries={history}
       onClose={() => setHistoryOpen(false)}
-      onUpload={(entry) =>
-        uploadHistoryEntry(entry, loadGistConfig(gistId)).then((outcome) => {
-          // Status aus dem localStorage nachladen, damit die Liste genau das
-          // zeigt, was tatsächlich gespeichert wurde.
-          setHistory(loadMatchHistory());
-          return outcome.uploaded;
-        })
-      }
       apiLoggedIn={apiAuth !== null}
       onApiUpload={(entry) =>
         uploadHistoryEntryToApi(entry).then((outcome) => {
+          // Status aus dem localStorage nachladen, damit die Liste genau das
+          // zeigt, was tatsächlich gespeichert wurde.
           setHistory(loadMatchHistory());
           setApiAuth(loadApiAuth());
           return outcome.uploaded;
@@ -301,18 +268,10 @@ function App() {
 
   const uploadErrorPopup = uploadPopupVisible ? (
     <UploadErrorPopup
-      onRetry={() => runMatchUpload(uploadFailedTargets)}
-      onConfirm={() => setUploadState(acknowledgeUploadFailures)}
+      onRetry={runMatchUpload}
+      onConfirm={() => setUploadState(acknowledgeUploadFailure)}
       retrying={isUploadRetrying(uploadState)}
-      failedTargets={uploadFailedTargets}
-      detail={
-        [
-          uploadState.gist.failure ? describeUploadFailure(uploadState.gist.failure) : null,
-          uploadState.api.failure ? describeApiUploadFailure(uploadState.api.failure) : null,
-        ]
-          .filter(Boolean)
-          .join(" ") || null
-      }
+      detail={uploadState.failure ? describeApiUploadFailure(uploadState.failure) : null}
     />
   ) : null;
 
@@ -322,11 +281,10 @@ function App() {
         <div className="app__floating-settings">{setupCornerButtons}</div>
         <SetupScreen
           resultUploadEnabled={resultUploadEnabled}
-          gistConfig={loadGistConfig(gistId)}
           onStart={(nameA, nameB, legsToWin) => {
             setShowMatchStats(false);
-            setGistStatus(null);
-            setUploadState(IDLE_TARGETS_STATE);
+            setUploadMessage(null);
+            setUploadState(IDLE_UPLOAD_STATE);
             dispatch({ type: "RESET_MATCH", nameA, nameB, legsToWin });
             dispatch({ type: "START_MATCH" });
           }}
@@ -344,14 +302,14 @@ function App() {
         <div className="app__floating-settings">{settingsButton}</div>
         <MatchStats
           state={state}
-          gistStatus={gistStatus}
+          uploadStatus={uploadMessage}
           newMatchDisabled={newMatchLocked}
           onNewMatch={() => {
             // Zweite Absicherung neben disabled und dem Guard in MatchStats.
             if (newMatchLocked) return;
             setShowMatchStats(false);
-            setGistStatus(null);
-            setUploadState(IDLE_TARGETS_STATE);
+            setUploadMessage(null);
+            setUploadState(IDLE_UPLOAD_STATE);
             dispatch({
               type: "RESET_MATCH",
               nameA: state.players[0].name,
@@ -450,7 +408,7 @@ function App() {
           />
         )}
 
-        {gistStatus && !matchWinnerForOverlay && <div className="gist-toast">{gistStatus}</div>}
+        {uploadMessage && !matchWinnerForOverlay && <div className="upload-toast">{uploadMessage}</div>}
 
         {state.editError && (
           <div className="leg-overlay">

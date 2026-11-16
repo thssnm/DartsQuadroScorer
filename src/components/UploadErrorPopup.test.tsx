@@ -1,11 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import {
-  API_UPLOAD_ERROR_MESSAGE,
-  UPLOAD_ERROR_MESSAGE,
-  UPLOAD_RETRY_LABEL,
-  UploadErrorPopup,
-} from "./UploadErrorPopup";
+import { UPLOAD_ERROR_MESSAGE, UPLOAD_RETRY_LABEL, UploadErrorPopup } from "./UploadErrorPopup";
 
 const render = (overrides: Partial<Parameters<typeof UploadErrorPopup>[0]> = {}): string =>
   renderToStaticMarkup(
@@ -33,25 +28,9 @@ describe("UploadErrorPopup", () => {
   });
 
   it("shows the error cause in small print when known", () => {
-    expect(render({ detail: "Gist nicht gefunden (404): Gist-ID prüfen." })).toContain(
-      "Gist nicht gefunden (404)"
+    expect(render({ detail: "API-Anmeldung abgelaufen (401): in den Einstellungen neu anmelden." })).toContain(
+      "API-Anmeldung abgelaufen (401)"
     );
     expect(render()).not.toContain("leg-overlay__detail");
-  });
-
-  it("keeps the tournament message whenever the gist failed", () => {
-    for (const failedTargets of [["gist"], ["gist", "api"]] as const) {
-      const markup = render({ failedTargets: [...failedTargets] });
-      expect(markup).toContain(UPLOAD_ERROR_MESSAGE);
-      expect(markup).not.toContain(API_UPLOAD_ERROR_MESSAGE);
-    }
-  });
-
-  it("names only the API when the gist upload worked", () => {
-    const markup = render({ failedTargets: ["api"] });
-
-    expect(markup).toContain(API_UPLOAD_ERROR_MESSAGE);
-    expect(markup).not.toContain(UPLOAD_ERROR_MESSAGE);
-    expect(markup).toContain(UPLOAD_RETRY_LABEL);
   });
 });

@@ -6,7 +6,8 @@ import { dartsInTurns } from "../game/dartCount";
 interface MatchStatsProps {
   state: GameState;
   onNewMatch: () => void;
-  gistStatus?: string | null;
+  // Fortschritt bzw. Erfolg des Ergebnis-Uploads, null = nichts anzuzeigen.
+  uploadStatus?: string | null;
   // Gesperrt, solange der Upload läuft oder sein Fehler noch nicht
   // quittiert wurde.
   newMatchDisabled?: boolean;
@@ -22,7 +23,7 @@ const legAverage = (turns: PlayerState["turns"]): number => {
 export const MatchStats = ({
   state,
   onNewMatch,
-  gistStatus,
+  uploadStatus,
   newMatchDisabled = false,
 }: MatchStatsProps) => {
   const [p0, p1] = state.players;
@@ -45,7 +46,7 @@ export const MatchStats = ({
       <p className="match-stats__score">
         {p0.name} {p0.legsWon} : {p1.legsWon} {p1.name}
       </p>
-      {gistStatus && <p className="match-stats__gist-status">{gistStatus}</p>}
+      {uploadStatus && <p className="match-stats__upload-status">{uploadStatus}</p>}
 
       <div className="match-stats__summary">
         <PlayerSummary name={p0.name} stats={stats0} />

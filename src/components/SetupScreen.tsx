@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import loveForDartsLogo from "../assets/Love-for-Darts-Logo.svg";
-import type { GistConfig } from "../gist/config";
-import { loadAllSetupPlayerNames } from "../api/playerNames";
+import { loadSetupPlayerNames } from "../api/playerNames";
 
 interface SetupScreenProps {
   onStart: (nameA: string, nameB: string, legsToWin: number) => void;
   resultUploadEnabled: boolean;
-  gistConfig: GistConfig;
 }
 
 const LEG_OPTIONS = [
@@ -44,17 +42,18 @@ export const PlayerNameField = ({ label, value, playerNames, onChange }: PlayerN
   </div>
 );
 
-export const SetupScreen = ({ onStart, resultUploadEnabled, gistConfig }: SetupScreenProps) => {
+export const SetupScreen = ({ onStart, resultUploadEnabled }: SetupScreenProps) => {
   const [nameA, setNameA] = useState("Heim");
   const [nameB, setNameB] = useState("Gast");
   const [legsToWin, setLegsToWin] = useState(2);
   const [playerNames, setPlayerNames] = useState<string[]>([]);
-  const initialPlayerLookup = useRef({ resultUploadEnabled, gistConfig });
+  // Die Namen werden einmal beim Öffnen geladen, nicht bei jeder Änderung
+  // des Schalters.
+  const initialUploadEnabled = useRef(resultUploadEnabled);
 
   useEffect(() => {
     let ignore = false;
-    const lookup = initialPlayerLookup.current;
-    void loadAllSetupPlayerNames(lookup.resultUploadEnabled, lookup.gistConfig).then((players) => {
+    void loadSetupPlayerNames(initialUploadEnabled.current).then((players) => {
       if (!ignore) setPlayerNames(players);
     });
 

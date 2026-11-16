@@ -1,4 +1,4 @@
-// PocketBase-Anbindung (zweites Upload-Ziel neben dem Gist).
+// PocketBase-Anbindung: Login, Ergebnis-Upload, Spielernamen.
 
 const DEFAULT_POCKETBASE_URL = "https://api.thssn.dev";
 

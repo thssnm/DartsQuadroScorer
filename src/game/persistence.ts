@@ -3,9 +3,7 @@ import type { GameState } from "./types";
 const STORAGE_KEY = "darts-quadro-scorer:game-state";
 const DEVICE_ID_KEY = "darts-quadro-scorer:device-id";
 const BOARD_ID_KEY = "darts-quadro-scorer:board-id";
-const GIST_ID_KEY = "darts-quadro-scorer:gist-id";
 const RESULT_UPLOAD_ENABLED_KEY = "darts-quadro-scorer:result-upload-enabled";
-const MATCH_UPLOADED_KEY = "darts-quadro-scorer:match-uploaded";
 const MATCH_CONFIRMED_KEY = "darts-quadro-scorer:match-confirmed";
 const MATCH_HISTORY_KEY = "darts-quadro-scorer:match-history";
 const MATCH_HISTORY_ID_KEY = "darts-quadro-scorer:match-history-id";
@@ -92,22 +90,6 @@ export const saveBoardId = (boardId: string): void => {
   }
 };
 
-export const loadGistId = (): string => {
-  try {
-    return window.localStorage.getItem(GIST_ID_KEY)?.trim() ?? "";
-  } catch {
-    return "";
-  }
-};
-
-export const saveGistId = (gistId: string): void => {
-  try {
-    window.localStorage.setItem(GIST_ID_KEY, gistId.trim());
-  } catch {
-    // siehe oben
-  }
-};
-
 export const loadResultUploadEnabled = (): boolean => {
   try {
     return window.localStorage.getItem(RESULT_UPLOAD_ENABLED_KEY) === "true";
@@ -128,8 +110,8 @@ export const saveResultUploadEnabled = (enabled: boolean): void => {
 // Damit ist das Match endgültig abgeschlossen: nach einem Reload führt das
 // gespeicherte Match direkt zur Statistik, statt das Popup erneut zu
 // zeigen - sonst käme über dessen "Rückgängig" eine Korrektur zustande,
-// deren Ergebnis als zweite Datei im Gist landen würde. Anders als
-// [loadMatchUploaded] hängt das Flag am Klick, nicht am Upload-Erfolg:
+// deren Ergebnis als zweiter Datensatz in der API landen würde. Anders als
+// [loadMatchUploadedApi] hängt das Flag am Klick, nicht am Upload-Erfolg:
 // bestätigt ist bestätigt, auch wenn Uploads abgeschaltet sind.
 export const loadMatchConfirmed = (): boolean => {
   try {
@@ -150,27 +132,11 @@ export const saveMatchConfirmed = (confirmed: boolean): void => {
 // Merkt sich, dass das AKTUELL gespeicherte Match bereits erfolgreich
 // hochgeladen wurde. Das Flag überlebt einen Reload - sonst würde ein
 // zweites Bestätigen des Match-Ende-Popups dasselbe Ergebnis ein zweites
-// Mal ins Gist schreiben. Es wird ausschließlich nach einem tatsächlich
+// Mal an die API schicken. Es wird ausschließlich nach einem tatsächlich
 // erfolgreichen Upload gesetzt und beim Start eines neuen Matches
-// (Phase "setup") wieder gelöscht.
-export const loadMatchUploaded = (): boolean => {
-  try {
-    return window.localStorage.getItem(MATCH_UPLOADED_KEY) === "true";
-  } catch {
-    return false;
-  }
-};
-
-export const saveMatchUploaded = (uploaded: boolean): void => {
-  try {
-    window.localStorage.setItem(MATCH_UPLOADED_KEY, uploaded ? "true" : "false");
-  } catch {
-    // siehe oben
-  }
-};
-
-// Gegenstück zu [loadMatchUploaded] für das API-Ziel. Eigener Merker, weil
-// Gist und API unabhängig voneinander gelingen oder scheitern können.
+// (Phase "setup") wieder gelöscht. Der Schlüssel heißt aus der Zeit mit
+// zwei Upload-Zielen "match-uploaded-api" - nicht umbenennen, sonst
+// verlieren die Boards den Merker.
 export const loadMatchUploadedApi = (): boolean => {
   try {
     return window.localStorage.getItem(MATCH_UPLOADED_API_KEY) === "true";
@@ -229,18 +195,18 @@ export const isResumableState = (state: GameState): boolean => state.phase !== "
 
 
 // ---------- Lokale Match-Historie ----------
-// Dauerhafte Liste aller beendeten Matches, unabhängig von [match-uploaded]
-// und [match-confirmed]: die beiden Merker gehören zum laufenden Match und
-// verfallen mit ihm, die Historie bleibt. Sie wird immer geschrieben, auch
-// wenn der Upload abgeschaltet ist oder fehlschlägt - damit ein Ergebnis am
-// Board nie nur im Gist existiert.
+// Dauerhafte Liste aller beendeten Matches, unabhängig von
+// [match-uploaded-api] und [match-confirmed]: die beiden Merker gehören zum
+// laufenden Match und verfallen mit ihm, die Historie bleibt. Sie wird immer
+// geschrieben, auch wenn der Upload abgeschaltet ist oder fehlschlägt -
+// damit ein Ergebnis am Board nie nur in der API existiert.
 
-export type MatchHistoryUploadStatus = "uploaded" | "not-uploaded" | "upload-disabled";
+// Status des API-Uploads. "not-logged-in": beim Match-Ende war kein Token da.
+export type MatchHistoryApiStatus = "uploaded" | "not-uploaded" | "not-logged-in" | "upload-disabled";
 
-// Status des API-Ziels. "not-logged-in": beim Match-Ende war kein Token da.
-export type MatchHistoryApiStatus = MatchHistoryUploadStatus | "not-logged-in";
-
-// Dieselben Angaben, die auch ins Gist gehen, plus Status und eine lokale ID.
+// Dieselben Angaben, die auch an die API gehen, plus Status und eine lokale
+// ID. Ältere Einträge tragen zusätzlich ein "uploadStatus"-Feld aus der Zeit
+// des Gist-Uploads; es wird ignoriert.
 export interface MatchHistoryEntry {
   id: string;
   boardName: string;
@@ -252,7 +218,6 @@ export interface MatchHistoryEntry {
   averageGuest?: number;
   highlights: string[];
   updatedAt: string;
-  uploadStatus: MatchHistoryUploadStatus;
   // Beide Felder fehlen bei Einträgen aus der Zeit vor dem API-Ziel.
   // matchId macht den API-Upload idempotent (Unique-Feld in PocketBase).
   matchId?: string;
@@ -285,15 +250,6 @@ const saveMatchHistory = (entries: MatchHistoryEntry[]): void => {
 
 export const appendMatchToHistory = (entry: MatchHistoryEntry): void => {
   saveMatchHistory([entry, ...loadMatchHistory()]);
-};
-
-export const updateMatchHistoryStatus = (
-  id: string,
-  uploadStatus: MatchHistoryUploadStatus
-): void => {
-  const entries = loadMatchHistory();
-  if (!entries.some((entry) => entry.id === id)) return;
-  saveMatchHistory(entries.map((entry) => (entry.id === id ? { ...entry, uploadStatus } : entry)));
 };
 
 export const updateMatchHistoryEntry = (

@@ -2,9 +2,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createInitialState } from "../game/gameReducer";
 import { loadMatchHistory, saveCurrentMatchHistoryId } from "../game/persistence";
 import type { GameState } from "../game/types";
-import { recordFinishedMatch } from "../gist/matchHistory";
+import { recordFinishedMatch } from "../api/matchHistory";
 import { ensureApiHistoryFields, uploadApiMatchResultOnce } from "../api/matchUpload";
-import { apiRoutes, bodyOf, callsTo, gistOk, loggedIn, stubFetch } from "../api/testHelpers";
+import { apiRoutes, bodyOf, callsTo, loggedIn, stubFetch } from "../api/testHelpers";
 
 const SESSION_KEY = "darts-quadro-scorer:livescore-session";
 
@@ -26,9 +26,9 @@ afterEach(() => {
 describe("matchId des Ergebnis-Uploads", () => {
   it("takes the liveMatchId of the running match", async () => {
     loggedIn(withLiveSession());
-    const fetchMock = stubFetch(gistOk, apiRoutes());
+    const fetchMock = stubFetch(apiRoutes());
 
-    const id = recordFinishedMatch(finishedState(), "Board 2", true);
+    const id = recordFinishedMatch(finishedState(), "Board 2");
     expect(ensureApiHistoryFields(id)).toBe("live-123");
     await uploadApiMatchResultOnce({ enabled: true, boardId: "Board 2", state: finishedState(), historyEntryId: id });
 
@@ -39,7 +39,7 @@ describe("matchId des Ergebnis-Uploads", () => {
   it("creates its own matchId as before without a live session", () => {
     loggedIn();
 
-    const id = recordFinishedMatch(finishedState(), "Board 2", true);
+    const id = recordFinishedMatch(finishedState(), "Board 2");
     const matchId = ensureApiHistoryFields(id);
 
     expect(matchId).toMatch(/^[0-9a-f-]{36}$/);
@@ -48,7 +48,7 @@ describe("matchId des Ergebnis-Uploads", () => {
 
   it("keeps an already stored matchId", () => {
     loggedIn();
-    const id = recordFinishedMatch(finishedState(), "Board 2", true);
+    const id = recordFinishedMatch(finishedState(), "Board 2");
     const first = ensureApiHistoryFields(id);
 
     window.localStorage.setItem(SESSION_KEY, JSON.stringify({ matchId: "live-123" }));
@@ -57,7 +57,7 @@ describe("matchId des Ergebnis-Uploads", () => {
 
   it("never hands the liveMatchId to an older history entry", () => {
     loggedIn();
-    const oldId = recordFinishedMatch(finishedState(), "Board 2", true);
+    const oldId = recordFinishedMatch(finishedState(), "Board 2");
     saveCurrentMatchHistoryId(null);
     window.localStorage.setItem(SESSION_KEY, JSON.stringify({ matchId: "live-123" }));
 
@@ -66,7 +66,7 @@ describe("matchId des Ergebnis-Uploads", () => {
 
   it("uses the liveMatchId when uploading without a history entry", async () => {
     loggedIn(withLiveSession());
-    const fetchMock = stubFetch(gistOk, apiRoutes());
+    const fetchMock = stubFetch(apiRoutes());
 
     await uploadApiMatchResultOnce({ enabled: true, boardId: "Board 2", state: finishedState(), historyEntryId: null });
 

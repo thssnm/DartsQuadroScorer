@@ -6,7 +6,7 @@ Kontext für KI-Agenten, die an diesem Repo arbeiten.
 
 **Quadro Darts Scorer** (`darts-quadro-scorer`) — Scoring-App für 501 Double Out, gebaut für die Bedienung am Board auf Tablet/Handy. Die Eingabe ist auf das Harrows Quadro Board zugeschnitten: Multiplikatoren x1–x4 (Quadro = x4), Bull 25, Bull-Extra 50. Installierbar als PWA, läuft komplett ohne Backend.
 
-Das Ergebnis eines beendeten Matches kann in ein GitHub Gist geschrieben werden, aus dem ein separates Dashboard-Projekt die Board-Ergebnisse liest. Parallel dazu gibt es ein zweites Upload-Ziel "API" (PocketBase unter `https://api.thssn.dev`).
+Das Ergebnis eines beendeten Matches wird an eine PocketBase-API (`https://api.thssn.dev`) geschickt, aus der ein separates Dashboard-Projekt die Board-Ergebnisse liest. Der frühere GitHub-Gist-Upload ist entfernt.
 
 Bedienung und Spielregeln aus Nutzersicht: `README.md`
 
@@ -17,26 +17,25 @@ Bedienung und Spielregeln aus Nutzersicht: `README.md`
 - Vitest 4 für Unit-Tests, kein jsdom — Tests laufen in der Node-Umgebung
 - oxlint (`.oxlintrc.json`), kein ESLint/Prettier
 - PWA über `vite-plugin-pwa` (Konfiguration in `vite.config.ts`)
-- Kein Backend. Persistenz über `localStorage` (`src/game/persistence.ts`). Externe Requests: die GitHub-Gist-API und die PocketBase-API.
+- Kein eigenes Backend. Persistenz über `localStorage` (`src/game/persistence.ts`). Externe Requests: nur die PocketBase-API.
 
 ## Architektur
 
 ```
 src/game/         Spiellogik: Reducer, Typen, Statistik, Persistenz — ohne React
-src/gist/         GitHub-Gist-Anbindung: Upload, Spielernamen, Config
-src/api/          PocketBase-Anbindung (Login, Upload, Spielernamen) und die
-                  Orchestrierung beider Upload-Ziele (uploadTargets.ts)
+src/api/          PocketBase-Anbindung: Login, Ergebnis-Upload, Spielernamen,
+                  lokale Match-Historie, Upload-Ablauf (uploadFlow.ts)
 src/live/         Livescore-Sender (Snapshot, Sender, ein Hook useLiveScore)
 src/components/   UI-Komponenten
 src/App.tsx       Komposition, Phasen-Routing, Effekte (Speichern, Upload)
 src/App.css       Styles der gesamten App (eine Datei)
 ```
 
-`src/game/`, `src/gist/` und `src/api/` enthalten **kein** JSX und keine React-Imports. In `src/live/` ist nur `useLiveScore.ts` React.
+`src/game/` und `src/api/` enthalten **kein** JSX und keine React-Imports. In `src/live/` ist nur `useLiveScore.ts` React.
 
 ### Zustand
 
-Ein einziger `useReducer` in `App.tsx` hält den kompletten Spielzustand (`GameState`, `src/game/types.ts`). Jede Zustandsänderung ist eine Action in `gameReducer`. Lokaler `useState` nur für UI-Belange, die kein Spielzustand sind (Settings-Dialog, Gist-Status, Statistik-Ansicht).
+Ein einziger `useReducer` in `App.tsx` hält den kompletten Spielzustand (`GameState`, `src/game/types.ts`). Jede Zustandsänderung ist eine Action in `gameReducer`. Lokaler `useState` nur für UI-Belange, die kein Spielzustand sind (Settings-Dialog, Upload-Status, Statistik-Ansicht).
 
 Phasen: `setup` → `playing` → `leg-finished` / `match-finished`.
 
@@ -77,21 +76,20 @@ Die folgenden Regeln sind in `gameReducer.test.ts` abgesichert. Wer sie ändert,
 - **Dart-Zählregel.** Nur eine Leg-gewinnende Aufnahme wird hinter dem entscheidenden Double abgeschnitten (`finalizedTurnDarts`). Jede andere Aufnahme zählt drei Darts, auch wenn leere Slots als Fehlwürfe bestätigt wurden. Davon hängen Average (Punkte / Darts × 3) und Best Leg ab.
 - **Korrektur-Mechanismus.** `EDIT_TURN`/`CONFIRM_EDIT` bearbeitet eine Aufnahme des laufenden Legs und rechnet die Rest-Kette ab dort neu durch. Wird eine spätere Aufnahme dadurch rechnerisch unmöglich oder läge ein Leg-Sieg plötzlich an anderer Stelle, wird die gesamte Änderung verworfen und `editError` gesetzt — nie teilweise übernehmen.
 - **Leg-Abschluss zurücknehmen.** `UNDO_LEG_RESULT` ("Rückgängig" im Leg-/Match-Ende-Popup) holt das letzte Leg bei **beiden** Spielern aus `legHistory` in die laufenden Aufnahmen zurück und senkt `legsWon`. Ein reines Zurücksetzen der Phase reicht nicht — die Aufnahmen wären sonst nicht mehr korrigierbar.
-- **"Weiter" im Match-Ende-Popup ist endgültig.** Der Klick setzt `match-confirmed` im `localStorage`; danach führt die App auch nach einem Reload direkt zur Statistik, nicht zurück ins Popup. Sonst entstünde über "Rückgängig" eine Korrektur, deren Ergebnis als zweite Datei im Gist landet.
-- **Ein Upload pro Match.** `uploadMatchResultOnce` setzt `match-uploaded` ausschließlich nach einem *erfolgreichen* Upload — ein fehlgeschlagener Versuch muss wiederholbar bleiben. Für das API-Ziel gilt dasselbe mit `match-uploaded-api` (`uploadApiMatchResultOnce`). Alle Merker verfallen mit dem Match (Phase `setup`).
-- **Zwei unabhängige Upload-Ziele.** Gist und API haben je eigenen Status, Merker und Retry (`src/api/uploadTargets.ts`). Die Gist-Seite bleibt unverändert; "Neues Match" wartet auf beide Ziele, ein übersprungenes Ziel (API ohne Login) zählt als fertig. Popup-Text: ist der Gist betroffen, der bisherige Text samt Turnierleitungs-Hinweis; nur API → eigener Text.
+- **"Weiter" im Match-Ende-Popup ist endgültig.** Der Klick setzt `match-confirmed` im `localStorage`; danach führt die App auch nach einem Reload direkt zur Statistik, nicht zurück ins Popup. Sonst entstünde über "Rückgängig" eine Korrektur, deren Ergebnis als zweiter Datensatz in der API landet.
+- **Ein Upload pro Match.** `uploadApiMatchResultOnce` setzt `match-uploaded-api` ausschließlich nach einem *erfolgreichen* Upload — ein fehlgeschlagener Versuch muss wiederholbar bleiben. Der Merker verfällt mit dem Match (Phase `setup`). Der Schlüsselname stammt aus der Zeit mit zwei Upload-Zielen und bleibt.
+- **"Neues Match" wartet auf den Upload.** `isNewMatchLocked` (`src/api/uploadFlow.ts`) gibt den Button nur bei `done` oder `acknowledged` frei; ein übersprungener Upload (Schalter aus, kein Login) zählt als fertig. Bei Fehler Popup mit Turnierleitungs-Hinweis und Retry.
 - **API-Datensatz.** `results` bekommt `matchId` (UUID, einmal pro Match im Historie-Eintrag persistiert, eindeutig in PocketBase), `boardName`, `home`, `guest`, `legsHome`, `legsGuest`, `averageHome`, `averageGuest`, `highlights`, `playedAt`. `acknowledged` wird nie gesendet. Ein 400 mit Feldfehler in `data.matchId` zählt als bereits hochgeladen. Token ohne `Bearer` im `Authorization`-Header; vor jedem Upload `auth-refresh`.
 - **Livescore ist Beobachter.** Der Sender (`src/live/`) liest den Spielzustand, löst nie Actions aus, wirft nie und hat keinen Einfluss auf Upload-Status, Merker, Popups oder "Neues Match". Default aus, aktiv nur mit Schalter **und** API-Token; ohne beides kein einziger Request. Höchstens ein Request gleichzeitig (5 s Timeout), danach nur der neueste Snapshot. Status `finished` erst nach "Weiter zur Statistik" oder bei "Spiel abbrechen". Bei 401/403 ein Refresh und ein Wiederholversuch, danach Pause bis zum nächsten Login oder App-Start.
 - **liveMatchId.** Wird nur bei aktivem Sender erzeugt (Key `livescore-session`, zusammen mit der Record-id) und verfällt bei neuem Match, Abbruch und nach dem `finished`-Snapshot. `ensureApiHistoryFields` übernimmt sie nur für den Historie-Eintrag des laufenden Matches; ohne Session bleibt die matchId-Erzeugung wie zuvor.
-- **Gist-Dateiformat.** `BoardGistFile` in `src/gist/api.ts` ist die Schnittstelle zum Dashboard: eine Datei `board-<Board>-<uuid>.json` pro beendetem Match mit `status: "finished"` und `acknowledged: false`, dazu die gemergte `players.json`. Feldnamen, `acknowledged`-Semantik und Dateinamensschema nur zusammen mit dem Dashboard ändern.
 - **localStorage-Schlüssel.** Alle unter dem Präfix `darts-quadro-scorer:`. Ein umbenannter Schlüssel verliert den laufenden Spielstand auf den Boards.
 
 ## Tests
 
-- `src/game/` und `src/gist/`: reine Unit-Tests gegen die Logik, Szenario-Stil wie in `gameReducer.test.ts`. Zustände über die vorhandenen Helfer (`playingState`, `withPlayer`, `setSlot`) aufbauen.
+- `src/game/` und `src/api/`: reine Unit-Tests gegen die Logik, Szenario-Stil wie in `gameReducer.test.ts`. Zustände über die vorhandenen Helfer (`playingState`, `withPlayer`, `setSlot`) aufbauen.
 - Komponenten: kein DOM-Testing-Setup vorhanden. Gerendert wird mit `renderToStaticMarkup` aus `react-dom/server`, geprüft wird das Markup (siehe `ResultOverlay.test.tsx`, `App.test.tsx`).
 - `window.localStorage` und `fetch` per `vi.stubGlobal` stubben, danach `vi.unstubAllGlobals()` im `afterEach` (siehe `persistence.test.ts`, `matchUpload.test.ts`). Es gibt keine echte `window`-Instanz in der Testumgebung.
-- Keine Netzwerk-Requests in Tests. Gist- und API-Upload werden ausschließlich über gestubbtes `fetch` getestet; für das API-Ziel gibt es Stubs mit URL-Routing in `src/api/testHelpers.ts`.
+- Keine Netzwerk-Requests in Tests. Der API-Upload wird ausschließlich über gestubbtes `fetch` getestet; Stubs mit URL-Routing liegen in `src/api/testHelpers.ts`.
 
 ## Terminologie (sichtbare Texte, deutsch)
 
@@ -106,18 +104,13 @@ Die folgenden Regeln sind in `gameReducer.test.ts` abgesichert. Wer sie ändert,
 
 Interne Bezeichner im Code (`turn`, `remaining`, `legsWon`) bleiben englisch und unverändert. Kommentare im Code sind deutsch und erklären das *Warum*, nicht das *Was*.
 
-## Gist-Anbindung
-
-- Token: `VITE_GITHUB_TOKEN` aus `.env` (Vorlage: `.env.example`), zur Buildzeit eingebettet. `.env` nicht committen.
-- Gist-ID und Board-Name werden pro Gerät in den App-Einstellungen gesetzt und liegen im `localStorage`, nicht im Build.
-- Ist der Upload abgeschaltet (Default) oder die Config unvollständig, läuft die App vollständig offline weiter — ein fehlender Token darf nie ein laufendes Spiel stören.
-
 ## API-Anbindung (PocketBase)
 
-- Server: `https://api.thssn.dev`, überschreibbar per `VITE_POCKETBASE_URL` (`src/api/client.ts`).
+- Server: `https://api.thssn.dev`, überschreibbar per `VITE_POCKETBASE_URL` (`src/api/client.ts`). Keine Secrets im Build.
+- Board-Name wird pro Gerät in den App-Einstellungen gesetzt und liegt im `localStorage`, nicht im Build.
 - Login im Settings-Modal (`users/auth-with-password`). Im `localStorage` liegen nur Token und E-Mail (`api-token`, `api-email`), nie das Passwort.
-- Der Online-Schalter gilt für beide Ziele (nicht für den Livescore, der hat einen eigenen Schalter). Ohne Token ist das API-Ziel "skipped": kein Fehler, kein Popup.
-- Spieler: Dropdown vereinigt Gist und `players`-Collection; beim Upload best-effort `POST players` für Heim und Gast, Fehler werden ignoriert.
+- Der Schalter "Ergebnis-Upload aktivieren" gilt für Upload und Spielerliste (nicht für den Livescore, der hat einen eigenen Schalter). Ohne Token ist der Upload "skipped": kein Fehler, kein Popup. Die App läuft ohne Anmeldung vollständig offline — eine fehlende Anmeldung darf nie ein laufendes Spiel stören.
+- Spieler: Dropdown aus der `players`-Collection; beim Upload best-effort `POST players` für Heim und Gast, Fehler werden ignoriert.
 
 ## Befehle
 
@@ -143,6 +136,6 @@ package-lock.json   src/assets/Love-for-Darts-Logo.svg   .env*
 
 - Commits laufen unter `thssnm`. `user.name` und `user.email` sind lokal im Repo gesetzt — **nicht überschreiben**.
 - Remote: `thssnm/DartsQuadroScorer`. Kein Force-Push auf `main`.
-- Deployment über Vercel, per GitHub-Integration verbunden: **jeder Push auf `main` löst automatisch einen Deploy aus**, ein manueller Schritt entfällt. `VITE_GITHUB_TOKEN` ist dort als Projekt-Umgebungsvariable hinterlegt (siehe README).
+- Deployment über Vercel, per GitHub-Integration verbunden: **jeder Push auf `main` löst automatisch einen Deploy aus**, ein manueller Schritt entfällt.
 - Nach jedem abgeschlossenen Teilschritt committen. Kleine, nachvollziehbare Commits.
 - **Mit jedem Commit die `version` in der `package.json` hochzählen** (Standard: Patch, also 1.0.0 → 1.0.1). Die App zeigt diese Nummer unter dem Zahnrad an; sie ist am Board der einzige Hinweis darauf, welcher Stand läuft. Minor/Major nur auf Ansage.
