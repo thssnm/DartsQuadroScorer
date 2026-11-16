@@ -21,12 +21,13 @@ describe("LegalPages", () => {
     expect(markup).toContain(LEGAL_CONTACT.email);
   });
 
-  it("names the controller, the hosting and the API server in the privacy policy", () => {
+  it("names the controller and the hosting, but not the hidden API features", () => {
     const markup = renderToStaticMarkup(<LegalModal page="datenschutz" onClose={vi.fn()} />);
 
     expect(markup).toContain(LEGAL_CONTACT.name);
     expect(markup).toContain("Vercel");
-    expect(markup).toContain("api.thssn.dev");
+    expect(markup).not.toContain("api.thssn.dev");
+    expect(markup).not.toContain("Livescore");
     expect(markup).toContain("localStorage");
     expect(markup).toContain("lovefordarts.de");
   });

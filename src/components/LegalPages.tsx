@@ -50,22 +50,6 @@ const Datenschutz = () => (
       erforderlich (§ 25 Abs. 2 Nr. 2 TDDDG). Es werden keine Cookies und kein Tracking eingesetzt.
     </p>
 
-    <h3>Ergebnis-Upload und Livescore</h3>
-    <p>
-      Ist ein Board angemeldet und der Upload bzw. Livescore aktiviert, werden Spielernamen, Leg-Stand, Averages,
-      Highlights, Board-Name und Zeitpunkt sowie während des Spiels der laufende Spielstand an den Server
-      api.thssn.dev übertragen und dort gespeichert. Zweck ist die Auswertung des Turniers und die Anzeige von
-      Ergebnissen und Livescore. Rechtsgrundlage ist das berechtigte Interesse an der Durchführung des Turniers
-      (Art. 6 Abs. 1 lit. f DSGVO). Die Daten werden gelöscht, sobald sie für diesen Zweck nicht mehr benötigt
-      werden.
-    </p>
-
-    <h3>Anmeldung eines Boards</h3>
-    <p>
-      Für die Anmeldung werden E-Mail-Adresse und Passwort an api.thssn.dev übermittelt. Auf dem Gerät bleiben nur
-      die E-Mail-Adresse und ein Anmelde-Token gespeichert, nie das Passwort.
-    </p>
-
     <h3>Externe Links</h3>
     <p>
       Der Partner-Link führt zu lovefordarts.de. Daten werden erst beim Anklicken an den dortigen Anbieter
