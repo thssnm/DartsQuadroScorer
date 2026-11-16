@@ -260,6 +260,7 @@ function App() {
       entries={history}
       onClose={() => setHistoryOpen(false)}
       apiLoggedIn={apiAuth !== null}
+      showUploadStatus={settingsAccess}
       onApiUpload={(entry) =>
         uploadHistoryEntryToApi(entry).then((outcome) => {
           // Status aus dem localStorage nachladen, damit die Liste genau das

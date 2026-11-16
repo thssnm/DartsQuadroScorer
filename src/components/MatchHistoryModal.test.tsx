@@ -18,9 +18,15 @@ const entry = (overrides: Partial<MatchHistoryEntry> = {}): MatchHistoryEntry =>
   ...overrides,
 });
 
-const render = (entries: MatchHistoryEntry[], apiLoggedIn = true): string =>
+const render = (entries: MatchHistoryEntry[], apiLoggedIn = true, showUploadStatus = true): string =>
   renderToStaticMarkup(
-    <MatchHistoryModal entries={entries} onApiUpload={vi.fn()} apiLoggedIn={apiLoggedIn} onClose={vi.fn()} />
+    <MatchHistoryModal
+      entries={entries}
+      onApiUpload={vi.fn()}
+      apiLoggedIn={apiLoggedIn}
+      showUploadStatus={showUploadStatus}
+      onClose={vi.fn()}
+    />
   );
 
 // Der Upload-Button eines Eintrags, so wie er im Markup steht.
@@ -83,6 +89,21 @@ describe("MatchHistoryModal", () => {
 
   it("stays usable without any finished match", () => {
     expect(render([])).toContain("Noch kein Match beendet.");
+  });
+
+  it("hides status, upload button and login hint without settings access", () => {
+    const markup = render(
+      [entry({ id: "a", apiUploadStatus: "upload-disabled" }), entry({ id: "b", apiUploadStatus: "not-logged-in" })],
+      false,
+      false
+    );
+
+    expect(markup).toContain("Alice 2 : 1 Bob");
+    expect(markup).not.toContain("Nicht übertragen (Upload deaktiviert)");
+    expect(markup).not.toContain("Nicht angemeldet");
+    expect(markup).not.toContain("In den Einstellungen anmelden");
+    expect(markup).not.toContain("match-history__status-row");
+    expect(uploadButtons(markup)).toHaveLength(0);
   });
 
   it("disables the upload without a login and says where to log in", () => {

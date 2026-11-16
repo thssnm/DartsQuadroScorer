@@ -17,6 +17,10 @@ interface MatchHistoryModalProps {
   // Liefert true, wenn der nachträgliche Upload geklappt hat.
   onApiUpload: (entry: MatchHistoryEntry) => Promise<boolean>;
   apiLoggedIn?: boolean;
+  // Ohne Zugang zu den Einstellungen (kein ?settings) gibt es nichts, was
+  // der Nutzer am Upload ändern könnte - Status, Button und Hinweis bleiben
+  // dann weg, die Liste zeigt nur die Ergebnisse.
+  showUploadStatus?: boolean;
   onClose: () => void;
 }
 
@@ -32,6 +36,7 @@ export const MatchHistoryModal = ({
   entries,
   onApiUpload,
   apiLoggedIn = false,
+  showUploadStatus = true,
   onClose,
 }: MatchHistoryModalProps) => {
   const [apiUploadingId, setApiUploadingId] = useState<string | null>(null);
@@ -89,25 +94,27 @@ export const MatchHistoryModal = ({
               {entry.highlights.length > 0 && (
                 <p className="match-history__meta">{entry.highlights.join(", ")}</p>
               )}
-              <div className="match-history__status-row">
-                <span className={`match-history__status match-history__status--${apiStatusOf(entry)}`}>
-                  {API_STATUS_LABEL[apiStatusOf(entry)]}
-                </span>
-                {/* Mehrfaches Klicken ist ungefährlich: die matchId ist in
-                    der API eindeutig. */}
-                {apiStatusOf(entry) !== "uploaded" && (
-                  <button
-                    type="button"
-                    className="match-history__api-upload"
-                    onClick={() => handleApiUpload(entry)}
-                    disabled={!apiLoggedIn || apiUploadingId === entry.id}
-                    title={apiLoggedIn ? undefined : "In den Einstellungen anmelden"}
-                  >
-                    {apiUploadingId === entry.id ? "Upload läuft …" : "Upload"}
-                  </button>
-                )}
-              </div>
-              {!apiLoggedIn && apiStatusOf(entry) !== "uploaded" && (
+              {showUploadStatus && (
+                <div className="match-history__status-row">
+                  <span className={`match-history__status match-history__status--${apiStatusOf(entry)}`}>
+                    {API_STATUS_LABEL[apiStatusOf(entry)]}
+                  </span>
+                  {/* Mehrfaches Klicken ist ungefährlich: die matchId ist in
+                      der API eindeutig. */}
+                  {apiStatusOf(entry) !== "uploaded" && (
+                    <button
+                      type="button"
+                      className="match-history__api-upload"
+                      onClick={() => handleApiUpload(entry)}
+                      disabled={!apiLoggedIn || apiUploadingId === entry.id}
+                      title={apiLoggedIn ? undefined : "In den Einstellungen anmelden"}
+                    >
+                      {apiUploadingId === entry.id ? "Upload läuft …" : "Upload"}
+                    </button>
+                  )}
+                </div>
+              )}
+              {showUploadStatus && !apiLoggedIn && apiStatusOf(entry) !== "uploaded" && (
                 <p className="match-history__meta">In den Einstellungen anmelden</p>
               )}
               {apiErrorId === entry.id && (
