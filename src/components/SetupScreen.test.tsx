@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { PlayerNameField, SetupScreen } from "./SetupScreen";
 import { DEFAULT_BEST_OF, bestOfFromInput } from "./setupLegs";
 
@@ -40,8 +40,37 @@ describe("bestOfFromInput", () => {
   });
 });
 
+const stubLocalStorage = (initial: Record<string, string> = {}) => {
+  const store = new Map(Object.entries(initial));
+  vi.stubGlobal("window", {
+    localStorage: {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        store.set(key, value);
+      },
+      removeItem: (key: string) => {
+        store.delete(key);
+      },
+    },
+  });
+};
+
 describe("SetupScreen", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("prefills best-of with the last started match", () => {
+    stubLocalStorage({ "darts-quadro-scorer:best-of": "5" });
+
+    const markup = renderToStaticMarkup(<SetupScreen onStart={vi.fn()} />);
+    const [bestOfInput] = [...markup.matchAll(/<input[^>]*type="number"[^>]*>/g)].map((m) => m[0]);
+
+    expect(bestOfInput).toContain('value="5"');
+  });
+
   it("offers a whole-number input for best-of with default 3", () => {
+    stubLocalStorage();
     const markup = renderToStaticMarkup(<SetupScreen onStart={vi.fn()} />);
     const [bestOfInput] = [...markup.matchAll(/<input[^>]*type="number"[^>]*>/g)].map((m) => m[0]);
 
@@ -53,6 +82,7 @@ describe("SetupScreen", () => {
 
 
   it("renders the Love for Darts sponsor link before the setup content", () => {
+    stubLocalStorage();
     const markup = renderToStaticMarkup(
       <SetupScreen onStart={vi.fn()} />
     );

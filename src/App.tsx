@@ -17,6 +17,7 @@ import {
   saveLiveScoreEnabled,
   loadMatchHistory,
   rememberPlayerNames,
+  saveLastBestOf,
   saveCurrentMatchHistoryId,
   type MatchHistoryEntry,
 } from "./game/persistence";
@@ -290,6 +291,7 @@ function App() {
           onStart={(nameA, nameB, bestOf) => {
             // Für das Dropdown ohne Anmeldung.
             rememberPlayerNames([nameA, nameB]);
+            saveLastBestOf(bestOf);
             setShowMatchStats(false);
             setUploadMessage(null);
             setUploadState(IDLE_UPLOAD_STATE);

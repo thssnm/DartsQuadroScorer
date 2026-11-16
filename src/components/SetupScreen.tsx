@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import loveForDartsLogo from "../assets/Love-for-Darts-Logo.svg";
 import { loadSetupPlayerNames } from "../api/playerNames";
+import { loadLastBestOf } from "../game/persistence";
 import { DEFAULT_BEST_OF, bestOfFromInput } from "./setupLegs";
 
 interface SetupScreenProps {
@@ -39,7 +40,8 @@ export const PlayerNameField = ({ label, value, playerNames, onChange }: PlayerN
 export const SetupScreen = ({ onStart }: SetupScreenProps) => {
   const [nameA, setNameA] = useState("Heim");
   const [nameB, setNameB] = useState("Gast");
-  const [bestOf, setBestOf] = useState(String(DEFAULT_BEST_OF));
+  // Vorbelegt mit dem zuletzt gestarteten Match, beim ersten Mal 3.
+  const [bestOf, setBestOf] = useState(() => String(loadLastBestOf(DEFAULT_BEST_OF)));
   const [playerNames, setPlayerNames] = useState<string[]>([]);
   useEffect(() => {
     let ignore = false;

@@ -13,6 +13,7 @@ const MATCH_UPLOADED_API_KEY = "darts-quadro-scorer:match-uploaded-api";
 const LIVESCORE_ENABLED_KEY = "darts-quadro-scorer:livescore-enabled";
 const LIVESCORE_SESSION_KEY = "darts-quadro-scorer:livescore-session";
 const PLAYER_NAMES_KEY = "darts-quadro-scorer:player-names";
+const BEST_OF_KEY = "darts-quadro-scorer:best-of";
 
 // Mehr Namen braucht ein Board nicht - die Liste soll ein Dropdown bleiben.
 const MAX_LOCAL_PLAYER_NAMES = 50;
@@ -314,6 +315,24 @@ export const rememberPlayerNames = (names: string[]): void => {
   const merged = [...fresh, ...loadLocalPlayerNames().filter((name) => !fresh.includes(name))];
   try {
     window.localStorage.setItem(PLAYER_NAMES_KEY, JSON.stringify(merged.slice(0, MAX_LOCAL_PLAYER_NAMES)));
+  } catch {
+    // siehe oben
+  }
+};
+
+// Zuletzt gewähltes "Best of" als Vorbelegung für das nächste Match.
+export const loadLastBestOf = (fallback: number): number => {
+  try {
+    const parsed = Number.parseInt(window.localStorage.getItem(BEST_OF_KEY) ?? "", 10);
+    return Number.isFinite(parsed) && parsed >= 1 ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+export const saveLastBestOf = (bestOf: number): void => {
+  try {
+    window.localStorage.setItem(BEST_OF_KEY, String(bestOf));
   } catch {
     // siehe oben
   }

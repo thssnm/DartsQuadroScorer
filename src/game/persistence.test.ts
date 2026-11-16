@@ -3,9 +3,11 @@ import {
   DEFAULT_BOARD_ID,
   loadBoardId,
   loadGameState,
+  loadLastBestOf,
   loadLocalPlayerNames,
   loadMatchConfirmed,
   rememberPlayerNames,
+  saveLastBestOf,
   loadResultUploadEnabled,
   saveBoardId,
   saveMatchConfirmed,
@@ -49,6 +51,31 @@ describe("game state persistence", () => {
     });
 
     expect(loadGameState()?.bestOf).toBe(2);
+  });
+});
+
+describe("last best-of", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("falls back to the given default on a fresh device or damaged value", () => {
+    stubLocalStorage();
+    expect(loadLastBestOf(3)).toBe(3);
+
+    stubLocalStorage({ "darts-quadro-scorer:best-of": "abc" });
+    expect(loadLastBestOf(3)).toBe(3);
+
+    stubLocalStorage({ "darts-quadro-scorer:best-of": "0" });
+    expect(loadLastBestOf(3)).toBe(3);
+  });
+
+  it("returns the value of the last started match", () => {
+    stubLocalStorage();
+
+    saveLastBestOf(4);
+
+    expect(loadLastBestOf(3)).toBe(4);
   });
 });
 
