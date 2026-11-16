@@ -1,5 +1,4 @@
 import type { CompletedLeg, PlayerState, Turn } from "./types";
-import { turnTotal } from "./types";
 import { dartsInTurns } from "./dartCount";
 
 export interface BestLeg {
@@ -16,7 +15,7 @@ export interface PlayerStats {
 }
 
 const scoreInTurns = (turns: Turn[]) =>
-  turns.reduce((sum, t) => sum + (t.bust ? 0 : turnTotal(t.darts)), 0);
+  turns.reduce((sum, t) => sum + (t.bust ? 0 : t.score), 0);
 
 // Average nach Standard-Darts-Konvention: Gesamtpunkte / tatsächlich
 // geworfene Darts * 3. Wichtig bei Finish-Aufnahmen mit weniger als 3
@@ -47,7 +46,7 @@ export const computePlayerStats = (player: PlayerState): PlayerStats => {
 
   for (const turn of allTurns) {
     if (turn.bust) continue;
-    const total = turnTotal(turn.darts);
+    const total = turn.score;
     if (total === 240) count240++;
     if (total >= 180) count180Plus++;
     if (total >= 140) count140Plus++;

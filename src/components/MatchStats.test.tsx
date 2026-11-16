@@ -2,7 +2,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MatchStats } from "./MatchStats";
 import { createInitialState } from "../game/gameReducer";
-import type { GameState } from "../game/types";
+import type { Dart, GameState, Turn } from "../game/types";
+import { turnTotal } from "../game/types";
 import { IDLE_UPLOAD_STATE, isNewMatchLocked, type UploadFlowState } from "../api/uploadFlow";
 import { runApiUploadFlow } from "../api/matchUpload";
 import { apiRoutes, loggedIn, stubFetch, type FetchHandler } from "../api/testHelpers";
@@ -49,6 +50,14 @@ describe("match title", () => {
 describe("leg cells", () => {
   it("shows the darts of the leg for the winner and the loser", () => {
     const d = (segment: number, multiplier: 1 | 2 | 3 | 4 = 1) => ({ segment, multiplier });
+    const t = (darts: Dart[], scoreBefore: number, scoreAfter: number): Turn => ({
+      darts,
+      score: turnTotal(darts),
+      dartCount: darts.length,
+      scoreBefore,
+      scoreAfter,
+      bust: false,
+    });
     const base = finishedMatch();
     const state: GameState = {
       ...base,
@@ -59,9 +68,9 @@ describe("leg cells", () => {
             {
               won: true,
               turns: [
-                { darts: [d(20, 3), d(20, 3), d(20, 3)], scoreBefore: 501, scoreAfter: 321, bust: false },
-                { darts: [d(20, 3), d(20, 3), d(20, 3)], scoreBefore: 321, scoreAfter: 141, bust: false },
-                { darts: [d(20, 3), d(19, 3), d(12, 2)], scoreBefore: 141, scoreAfter: 0, bust: false },
+                t([d(20, 3), d(20, 3), d(20, 3)], 501, 321),
+                t([d(20, 3), d(20, 3), d(20, 3)], 321, 141),
+                t([d(20, 3), d(19, 3), d(12, 2)], 141, 0),
               ],
             },
           ],
@@ -72,8 +81,8 @@ describe("leg cells", () => {
             {
               won: false,
               turns: [
-                { darts: [d(20), d(20), d(20)], scoreBefore: 501, scoreAfter: 441, bust: false },
-                { darts: [d(0), d(0), d(0)], scoreBefore: 441, scoreAfter: 441, bust: false },
+                t([d(20), d(20), d(20)], 501, 441),
+                t([d(0), d(0), d(0)], 441, 441),
               ],
             },
           ],

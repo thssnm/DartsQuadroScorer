@@ -38,11 +38,20 @@ installieren, statt jedes Mal `npm run dev` zu starten.
 ## Bedienung
 
 - **Setup:** Spielernamen eintragen, "Best of" als ganze Zahl eintragen
-  (Default 3, gerade Werte erlaubt),
-  mit dem Switch-Button den Startspieler festlegen.
-- **Eingabe:** Zahl 1–20 antippen für einfachen Wert. Vorher x2/x3/x4
-  aktivieren für Double/Triple/Quadro. 25 = Bull, mit aktivem x2 = Bull-Extra
-  (50). 0 = Fehlwurf.
+  (Default 3, gerade Werte erlaubt), mit dem Switch-Button den Startspieler
+  festlegen. Die Checkbox "Einzeldarteingabe" (Default an, letzte Wahl wird
+  gemerkt) wählt zwischen Dart- und Summeneingabe.
+- **Einzeldarteingabe:** Zahl 1–20 antippen für einfachen Wert. Vorher
+  x2/x3/x4 aktivieren für Double/Triple/Quadro. 25 = Bull, mit aktivem x2 =
+  Bull-Extra (50). 0 = Fehlwurf.
+- **Summeneingabe:** Nur die Summe der Aufnahme wird über den Ziffernblock
+  getippt (0 bis 240), gerechnet wird selbst. Rechts daneben stehen sechs
+  Shortcuts, die die Aufnahme sofort bestätigen: anfangs 140, 100, 80, 60,
+  41, 45, danach die am häufigsten getippten Scores (neu sortiert nach
+  jedem Match, nie währenddessen). Ein Double kann die App hier nicht
+  prüfen: Rest 0 ist der Checkout, Rest 1 oder darunter ein Bust. Beim
+  Checkout fragt ein Popup, mit wie vielen Darts gecheckt wurde (für
+  Average und Best Leg).
 - **BUST:** Verwirft die aktuelle Aufnahme, der Punktestand bleibt
   unverändert, der Spieler wechselt. Nutzen, falls ein Bust manuell
   markiert werden muss.

@@ -17,12 +17,16 @@ const finishedMatch = (): GameState => {
       { segment: 20, multiplier: 3 as const },
       { segment: 20, multiplier: 3 as const },
     ],
+    score: 180,
+    dartCount: 3,
     scoreBefore: 501,
     scoreAfter: 321,
     bust: false,
   };
   const checkout = {
     darts: [{ segment: 20, multiplier: 2 as const }],
+    score: 40,
+    dartCount: 1,
     scoreBefore: 141,
     scoreAfter: 0,
     bust: false,

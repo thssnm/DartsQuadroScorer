@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { computePlayerStats } from "./stats";
 import type { Dart, Multiplier, PlayerState, Turn } from "./types";
+import { turnTotal } from "./types";
 
 const dart = (segment: number, multiplier: Multiplier = 1): Dart => ({ segment, multiplier });
 const turn = (darts: Dart[], bust = false): Turn => ({
   darts,
+  score: turnTotal(darts),
+  dartCount: darts.length,
   scoreBefore: 501,
   scoreAfter: 501,
   bust,

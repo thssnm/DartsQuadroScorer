@@ -12,13 +12,15 @@ import { dartsInTurns } from "./dartCount";
 import { computeHighlights } from "./highlights";
 import { computePlayerStats } from "./stats";
 import type { Dart, DartSlot, GameState, Multiplier, PlayerState, Turn } from "./types";
-import { emptySlot } from "./types";
+import { emptySlot, turnTotal } from "./types";
 
 const dart = (segment: number, multiplier: Multiplier = 1): Dart => ({ segment, multiplier });
 const miss = (): Dart => dart(0);
 const slot = (segment: number, multiplier: Multiplier = 1): DartSlot => ({ segment, multiplier });
 const turn = (scoreBefore: number, darts: Dart[], scoreAfter: number, bust = false): Turn => ({
   darts,
+  score: turnTotal(darts),
+  dartCount: darts.length,
   scoreBefore,
   scoreAfter,
   bust,
@@ -696,5 +698,149 @@ describe("UNDO_LEG_RESULT", () => {
     expect(state.players[1].turns).toHaveLength(4);
     expect(state.players[1].remaining).toBe(261);
     expect(state.activePlayer).toBe(0);
+  });
+});
+
+// Summeneingabe: nur der Score der Aufnahme wird getippt, das Double lässt
+// sich nicht prüfen, der Checkout bekommt seine Dartzahl aus dem Popup.
+describe("score input mode", () => {
+  const scoreState = (remaining = 501): GameState => {
+    const state: GameState = { ...createInitialState("A", "B", 3, "score"), phase: "playing" };
+    return withPlayer(state, 0, { ...state.players[0], remaining });
+  };
+  const typed = (state: GameState, value: string): GameState =>
+    [...value].reduce((next, ch) => reduce(next, { type: "SCORE_DIGIT", digit: Number(ch) }), state);
+
+  it("collects digits up to the quadro maximum of 240 and replaces a leading zero", () => {
+    expect(typed(scoreState(), "140").scoreDraft).toBe("140");
+    expect(typed(scoreState(), "240").scoreDraft).toBe("240");
+    // 241 ist unmöglich, die dritte Ziffer wird verworfen.
+    expect(typed(scoreState(), "241").scoreDraft).toBe("24");
+    expect(typed(scoreState(), "07").scoreDraft).toBe("7");
+    expect(typed(scoreState(), "0").scoreDraft).toBe("0");
+  });
+
+  it("removes the last digit with backspace and accepts a whole value", () => {
+    const state = reduce(typed(scoreState(), "140"), { type: "SCORE_BACKSPACE" });
+    expect(state.scoreDraft).toBe("14");
+    expect(reduce(state, { type: "SET_SCORE_DRAFT", value: "100" }).scoreDraft).toBe("100");
+    expect(reduce(state, { type: "SET_SCORE_DRAFT", value: "300" }).scoreDraft).toBe("14");
+  });
+
+  it("confirms a turn with three darts and switches the player", () => {
+    const result = reduce(typed(scoreState(), "140"), { type: "CONFIRM_TURN" });
+
+    expect(result.players[0].remaining).toBe(361);
+    expect(result.players[0].turns[0]).toMatchObject({ darts: [], score: 140, dartCount: 3, scoreBefore: 501, scoreAfter: 361, bust: false });
+    expect(result.scoreDraft).toBe("");
+    expect(result.activePlayer).toBe(1);
+  });
+
+  it("ignores confirm without a typed score", () => {
+    const state = scoreState();
+    expect(reduce(state, { type: "CONFIRM_TURN" })).toBe(state);
+  });
+
+  it("busts when the score overshoots or leaves exactly 1", () => {
+    const over = reduce(typed(scoreState(40), "60"), { type: "CONFIRM_TURN" });
+    expect(over.players[0].turns[0]).toMatchObject({ score: 60, bust: true, scoreAfter: 40, dartCount: 3 });
+    expect(over.players[0].remaining).toBe(40);
+
+    const one = reduce(typed(scoreState(40), "39"), { type: "CONFIRM_TURN" });
+    expect(one.players[0].turns[0]?.bust).toBe(true);
+    expect(one.activePlayer).toBe(1);
+  });
+
+  it("finishes the leg on an exact score with the chosen dart count", () => {
+    const result = reduce(typed(scoreState(100), "100"), { type: "CONFIRM_TURN", dartsUsed: 2 });
+
+    expect(result.phase).toBe("leg-finished");
+    expect(result.players[0].legsWon).toBe(1);
+    expect(result.players[0].legHistory[0]?.turns[0]).toMatchObject({ score: 100, dartCount: 2, scoreAfter: 0 });
+    expect(computePlayerStats(result.players[0]).bestLeg).toEqual({ darts: 2 });
+    expect(computePlayerStats(result.players[0]).matchAverage).toBeCloseTo((100 / 2) * 3);
+  });
+
+  it("counts three darts for a checkout without a chosen dart count", () => {
+    const result = reduce(typed(scoreState(100), "100"), { type: "CONFIRM_TURN" });
+    expect(result.players[0].legHistory[0]?.turns[0]?.dartCount).toBe(3);
+  });
+
+  it("restores the score as digits on undo", () => {
+    const confirmed = reduce(typed(scoreState(), "140"), { type: "CONFIRM_TURN" });
+    const undone = reduce(confirmed, { type: "UNDO_LAST_TURN" });
+
+    expect(undone.scoreDraft).toBe("140");
+    expect(undone.players[0].turns).toEqual([]);
+    expect(undone.players[0].remaining).toBe(501);
+    expect(undone.activePlayer).toBe(0);
+  });
+
+  it("edits an earlier turn and recalculates the chain", () => {
+    let state = reduce(typed(scoreState(), "140"), { type: "CONFIRM_TURN" }); // A: 361
+    state = reduce(typed(state, "60"), { type: "CONFIRM_TURN" }); // B
+    state = reduce(typed(state, "100"), { type: "CONFIRM_TURN" }); // A: 261
+
+    state = reduce(state, { type: "EDIT_TURN", playerIndex: 0, turnIndex: 0 });
+    expect(state.scoreDraft).toBe("140");
+    state = reduce(state, { type: "SCORE_BACKSPACE" });
+    state = reduce(state, { type: "SCORE_BACKSPACE" });
+    state = reduce(typed(state, "80"), { type: "CONFIRM_EDIT" }); // 180
+
+    expect(state.editingTurn).toBeNull();
+    expect(state.players[0].turns.map((t) => [t.score, t.scoreBefore, t.scoreAfter])).toEqual([
+      [180, 501, 321],
+      [100, 321, 221],
+    ]);
+    expect(state.players[0].remaining).toBe(221);
+    expect(state.scoreDraft).toBe("");
+  });
+
+  it("rejects an edit that makes a later turn impossible or ends the leg early", () => {
+    let state = reduce(typed(scoreState(200), "100"), { type: "CONFIRM_TURN" }); // A: 100
+    state = reduce(typed(state, "60"), { type: "CONFIRM_TURN" }); // B
+    state = reduce(typed(state, "60"), { type: "CONFIRM_TURN" }); // A: 40
+
+    const impossible = reduce(
+      reduce(reduce(state, { type: "EDIT_TURN", playerIndex: 0, turnIndex: 0 }), { type: "SET_SCORE_DRAFT", value: "180" }),
+      { type: "CONFIRM_EDIT" }
+    );
+    expect(impossible.editError).toBe("Diese Änderung würde eine spätere Aufnahme unmöglich machen.");
+    expect(impossible.players[0].turns[0]?.score).toBe(100);
+
+    const early = reduce(
+      reduce(reduce(state, { type: "EDIT_TURN", playerIndex: 0, turnIndex: 0 }), { type: "SET_SCORE_DRAFT", value: "200" }),
+      { type: "CONFIRM_EDIT", dartsUsed: 3 }
+    );
+    expect(early.editError).toBe("Diese Änderung würde das Leg vorzeitig beenden.");
+  });
+
+  it("finishes the leg when the edited last turn becomes the checkout", () => {
+    let state = reduce(typed(scoreState(100), "60"), { type: "CONFIRM_TURN" }); // A: 40
+    state = reduce(state, { type: "EDIT_TURN", playerIndex: 0, turnIndex: 0 });
+    state = reduce(reduce(state, { type: "SET_SCORE_DRAFT", value: "100" }), { type: "CONFIRM_EDIT", dartsUsed: 3 });
+
+    expect(state.phase).toBe("leg-finished");
+    expect(state.players[0].legHistory[0]?.turns[0]).toMatchObject({ score: 100, dartCount: 3, scoreAfter: 0 });
+  });
+
+  it("blocks the starting player switch once digits are typed", () => {
+    const state = typed(scoreState(), "1");
+    expect(reduce(state, { type: "SWITCH_STARTING_PLAYER" })).toBe(state);
+  });
+
+  it("keeps the input mode for the next match and on abort", () => {
+    const state = scoreState();
+    expect(reduce(state, { type: "ABORT_MATCH" }).inputMode).toBe("score");
+    expect(reduce(state, { type: "RESET_MATCH", nameA: "A", nameB: "B", bestOf: 3, inputMode: "score" }).inputMode).toBe("score");
+    expect(reduce(state, { type: "RESET_MATCH", nameA: "A", nameB: "B", bestOf: 3 }).inputMode).toBe("darts");
+  });
+
+  it("stores score and dart count for dart-mode turns as well", () => {
+    let state = withPlayer(playingState(), 0, { ...playingState().players[0], remaining: 40 });
+    state = setSlot(state, 0, 20, 2);
+    const result = reduce(state, { type: "CONFIRM_TURN" });
+
+    expect(result.players[0].legHistory[0]?.turns[0]).toMatchObject({ score: 40, dartCount: 1 });
   });
 });

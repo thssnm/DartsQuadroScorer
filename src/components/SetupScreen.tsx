@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import loveForDartsLogo from "../assets/Love-for-Darts-Logo.svg";
 import { loadSetupPlayerNames } from "../api/playerNames";
-import { loadLastBestOf } from "../game/persistence";
+import { loadLastBestOf, loadLastInputMode } from "../game/persistence";
+import type { InputMode } from "../game/types";
 import { DEFAULT_BEST_OF, bestOfFromInput } from "./setupLegs";
 
 interface SetupScreenProps {
-  onStart: (nameA: string, nameB: string, bestOf: number) => void;
+  onStart: (nameA: string, nameB: string, bestOf: number, inputMode: InputMode) => void;
 }
 
 
@@ -42,6 +43,8 @@ export const SetupScreen = ({ onStart }: SetupScreenProps) => {
   const [nameB, setNameB] = useState("Gast");
   // Vorbelegt mit dem zuletzt gestarteten Match, beim ersten Mal 3.
   const [bestOf, setBestOf] = useState(() => String(loadLastBestOf(DEFAULT_BEST_OF)));
+  // Vorbelegt mit der letzten Wahl, beim ersten Mal Einzeldarteingabe.
+  const [singleDarts, setSingleDarts] = useState(() => loadLastInputMode() === "darts");
   const [playerNames, setPlayerNames] = useState<string[]>([]);
   useEffect(() => {
     let ignore = false;
@@ -85,9 +88,23 @@ export const SetupScreen = ({ onStart }: SetupScreenProps) => {
         />
       </div>
 
+      <div className="setup-row">
+        <label className="setup-checkbox">
+          <input type="checkbox" checked={singleDarts} onChange={(e) => setSingleDarts(e.target.checked)} />
+          <span>Einzeldarteingabe</span>
+        </label>
+        <p className="setup-hint">
+          {singleDarts
+            ? "Jeder Dart wird einzeln eingegeben, die App prüft das Double."
+            : "Nur die Summe der Aufnahme wird eingegeben, gerechnet wird selbst."}
+        </p>
+      </div>
+
       <button
         className="start-btn"
-        onClick={() => onStart(nameA || "Spieler 1", nameB || "Spieler 2", bestOfFromInput(bestOf))}
+        onClick={() =>
+          onStart(nameA || "Spieler 1", nameB || "Spieler 2", bestOfFromInput(bestOf), singleDarts ? "darts" : "score")
+        }
       >
         Spiel starten
       </button>

@@ -24,11 +24,19 @@ export const slotToDart = (slot: DartSlot): Dart | null =>
   isSlotComplete(slot) ? { segment: slot.segment, multiplier: slot.multiplier } : null;
 
 export interface Turn {
-  darts: Dart[];
+  darts: Dart[]; // leer im Score-Modus
+  score: number; // geworfene Punkte (bei Bust: das Geworfene, zählt in der Statistik 0)
+  dartCount: number; // gezählte Darts, siehe Dart-Zählregel
   scoreBefore: number;
   scoreAfter: number;
   bust: boolean;
 }
+
+// Höchste Aufnahme am Quadro-Board: drei Quadro-20.
+export const SCORE_MAX = 240;
+
+// darts: jeder Dart einzeln. score: nur die Summe der Aufnahme wird getippt.
+export type InputMode = "darts" | "score";
 
 // Ein abgeschlossenes Leg: die Turns, die während des Legs geworfen wurden.
 export interface CompletedLeg {
@@ -52,7 +60,9 @@ export interface GameState {
   activePlayer: 0 | 1;
   startingPlayer: 0 | 1;
   bestOf: number; // Gesamtzahl der Legs, z.B. 3 bei "Best of 3"
-  currentSlots: [DartSlot, DartSlot, DartSlot]; // die 3 Darts der laufenden Aufnahme
+  inputMode: InputMode;
+  currentSlots: [DartSlot, DartSlot, DartSlot]; // die 3 Darts der laufenden Aufnahme (Dart-Modus)
+  scoreDraft: string; // getippte Ziffern der laufenden Aufnahme (Score-Modus)
   // Ist gesetzt, während eine bereits bestätigte Aufnahme gerade bearbeitet
   // wird (Klick in der Score-Liste). currentSlots zeigt in diesem Fall die
   // Darts dieser Aufnahme zur Korrektur, nicht eine neue Eingabe.

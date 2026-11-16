@@ -69,6 +69,18 @@ describe("SetupScreen", () => {
     expect(bestOfInput).toContain('value="5"');
   });
 
+  it("defaults to single-dart input and remembers the last choice", () => {
+    stubLocalStorage();
+    const checkbox = (markup: string) => [...markup.matchAll(/<input[^>]*type="checkbox"[^>]*>/g)].map((m) => m[0])[0];
+
+    const fresh = renderToStaticMarkup(<SetupScreen onStart={vi.fn()} />);
+    expect(fresh).toContain("Einzeldarteingabe");
+    expect(checkbox(fresh)).toContain("checked");
+
+    stubLocalStorage({ "darts-quadro-scorer:input-mode": "score" });
+    expect(checkbox(renderToStaticMarkup(<SetupScreen onStart={vi.fn()} />))).not.toContain("checked");
+  });
+
   it("offers a whole-number input for best-of with default 3", () => {
     stubLocalStorage();
     const markup = renderToStaticMarkup(<SetupScreen onStart={vi.fn()} />);

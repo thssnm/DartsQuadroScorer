@@ -1,7 +1,7 @@
 {
   "name": "darts-quadro-scorer",
   "private": true,
-  "version": "1.0.18",
+  "version": "1.0.19",
   "type": "module",
   "packageManager": "npm@11.19.0",
   "scripts": {

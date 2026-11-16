@@ -6,6 +6,8 @@ import type { GameState, PlayerState, Turn } from "../game/types";
 
 const turn = (points: number, scoreBefore: number): Turn => ({
   darts: [{ segment: points, multiplier: 1 }],
+  score: points,
+  dartCount: 1,
   scoreBefore,
   scoreAfter: scoreBefore - points,
   bust: false,

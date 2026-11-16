@@ -56,6 +56,33 @@ const drawnMatch = (): GameState => {
   return gameReducer(state, { type: "CONFIRM_TURN" });
 };
 
+describe("App in score input mode", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("shows the numpad with shortcuts instead of the dart grid", () => {
+    const state: GameState = { ...createInitialState("Alice", "Bob", 3, "score"), phase: "playing" };
+    const markup = renderAfterReload({
+      [GAME_STATE_KEY]: JSON.stringify(state),
+      "darts-quadro-scorer:score-frequency": JSON.stringify({ "26": 3 }),
+    });
+
+    expect(markup).toContain("score-input__numpad");
+    expect(markup).toContain("Häufige Scores");
+    expect(markup).toContain(">26</button>");
+    expect(markup).not.toContain("num-btn");
+  });
+
+  it("keeps the dart grid in single-dart mode", () => {
+    const state: GameState = { ...createInitialState("Alice", "Bob", 3), phase: "playing" };
+    const markup = renderAfterReload({ [GAME_STATE_KEY]: JSON.stringify(state) });
+
+    expect(markup).toContain("num-btn");
+    expect(markup).not.toContain("score-input__numpad");
+  });
+});
+
 describe("App with a drawn match", () => {
   afterEach(() => {
     vi.unstubAllGlobals();

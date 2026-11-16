@@ -1,5 +1,6 @@
 import { createInitialState, gameReducer, type GameAction } from "../game/gameReducer";
 import type { Dart, GameState, Multiplier, PlayerState, Turn } from "../game/types";
+import { turnTotal } from "../game/types";
 
 // Spielzustände für die Livescore-Tests, aufgebaut wie in gameReducer.test.ts.
 
@@ -7,6 +8,8 @@ export const dart = (segment: number, multiplier: Multiplier = 1): Dart => ({ se
 
 export const turn = (scoreBefore: number, darts: Dart[], scoreAfter: number): Turn => ({
   darts,
+  score: turnTotal(darts),
+  dartCount: darts.length,
   scoreBefore,
   scoreAfter,
   bust: false,

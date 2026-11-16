@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
-import { createInitialState, gameReducer } from "./game/gameReducer";
+import { createInitialState, gameReducer, parseScoreDraft, type CheckoutDarts } from "./game/gameReducer";
+import { addMatchScores, scoreShortcuts } from "./game/scoreShortcuts";
 import {
   loadGameState,
   saveGameState,
@@ -15,15 +16,21 @@ import {
   loadApiAuth,
   loadLiveScoreEnabled,
   saveLiveScoreEnabled,
+  loadCurrentMatchHistoryId,
   loadMatchHistory,
+  loadScoreCounts,
   rememberPlayerNames,
   saveLastBestOf,
+  saveLastInputMode,
+  saveScoreCounts,
   saveCurrentMatchHistoryId,
   type MatchHistoryEntry,
 } from "./game/persistence";
 import { SetupScreen } from "./components/SetupScreen";
 import { Scoreboard } from "./components/Scoreboard";
 import { DartInput } from "./components/DartInput";
+import { ScoreInput } from "./components/ScoreInput";
+import { CheckoutDartsPrompt } from "./components/CheckoutDartsPrompt";
 import { MatchStats } from "./components/MatchStats";
 import { SettingsModal, type Settings } from "./components/SettingsModal";
 import { MatchHistoryModal } from "./components/MatchHistoryModal";
@@ -57,7 +64,9 @@ import "./App.css";
 const hasMatchInput = (state: GameState): boolean =>
   state.players.some(
     (player) => player.turns.length > 0 || player.legHistory.some((leg) => leg.turns.length > 0)
-  ) || state.currentSlots.some((slot) => slot.segment !== null || slot.multiplier !== 1);
+  ) ||
+  state.currentSlots.some((slot) => slot.segment !== null || slot.multiplier !== 1) ||
+  state.scoreDraft !== "";
 
 function App() {
   const [state, dispatch] = useReducer(gameReducer, undefined, () => {
@@ -73,6 +82,12 @@ function App() {
   const [apiAuth, setApiAuth] = useState(() => loadApiAuth());
   const [liveScoreEnabled, setLiveScoreEnabled] = useState(() => loadLiveScoreEnabled());
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Shortcuts der Summeneingabe: nur beim Matchstart neu sortiert, nie
+  // während eines Matches.
+  const [shortcuts, setShortcuts] = useState(() => scoreShortcuts(loadScoreCounts()));
+  // Offen, sobald im Score-Modus eine Aufnahme den Rest genau trifft: erst
+  // die Dartzahl, dann wird bestätigt.
+  const [checkoutPromptOpen, setCheckoutPromptOpen] = useState(false);
   // Einmal beim Start ausgewertet; der Parameter steht in der Adresse, mit
   // der das Board eingerichtet wird.
   const [settingsAccess] = useState(() => hasSettingsAccess());
@@ -157,6 +172,9 @@ function App() {
 
     if (!changedToMatchConfirmed) return;
 
+    // Score-Zähler für die Shortcuts: genau einmal pro Match, deshalb an
+    // den noch fehlenden Historie-Eintrag gekoppelt (Reload-sicher).
+    if (loadCurrentMatchHistoryId() === null) saveScoreCounts(addMatchScores(loadScoreCounts(), state));
     // Lokale Kopie des Ergebnisses - unabhängig vom Upload-Schalter und vom
     // Ausgang des Uploads. Ein zweiter Durchlauf (Reload) legt keinen
     // weiteren Eintrag an.
@@ -288,14 +306,16 @@ function App() {
       <>
         <div className="app__floating-settings">{setupCornerButtons}</div>
         <SetupScreen
-          onStart={(nameA, nameB, bestOf) => {
+          onStart={(nameA, nameB, bestOf, inputMode) => {
             // Für das Dropdown ohne Anmeldung.
             rememberPlayerNames([nameA, nameB]);
             saveLastBestOf(bestOf);
+            saveLastInputMode(inputMode);
+            setShortcuts(scoreShortcuts(loadScoreCounts()));
             setShowMatchStats(false);
             setUploadMessage(null);
             setUploadState(IDLE_UPLOAD_STATE);
-            dispatch({ type: "RESET_MATCH", nameA, nameB, bestOf });
+            dispatch({ type: "RESET_MATCH", nameA, nameB, bestOf, inputMode });
             dispatch({ type: "START_MATCH" });
           }}
         />
@@ -320,11 +340,13 @@ function App() {
             setShowMatchStats(false);
             setUploadMessage(null);
             setUploadState(IDLE_UPLOAD_STATE);
+            setShortcuts(scoreShortcuts(loadScoreCounts()));
             dispatch({
               type: "RESET_MATCH",
               nameA: state.players[0].name,
               nameB: state.players[1].name,
               bestOf: state.bestOf,
+              inputMode: state.inputMode,
             });
           }}
         />
@@ -357,6 +379,63 @@ function App() {
 
   const legsSummary = `Legs: ${state.players[0].name} ${state.players[0].legsWon} : ${state.players[1].legsWon} ${state.players[1].name}`;
 
+  const confirmType = state.editingTurn ? "CONFIRM_EDIT" : "CONFIRM_TURN";
+  const onAbort = () => {
+    if (window.confirm("Spiel wirklich abbrechen und neu starten?")) {
+      dispatch({ type: "ABORT_MATCH" });
+    }
+  };
+  // Score-Modus: trifft die Aufnahme den Rest genau, fragt das Popup erst
+  // nach der Dartzahl; alles andere wird direkt bestätigt.
+  const confirmScore = (score: number | null) => {
+    if (score === null) return;
+    if (score === remainingForInput) setCheckoutPromptOpen(true);
+    else dispatch({ type: confirmType });
+  };
+  const confirmCheckout = (dartsUsed: CheckoutDarts) => {
+    setCheckoutPromptOpen(false);
+    dispatch({ type: confirmType, dartsUsed });
+  };
+
+  const input =
+    state.inputMode === "score" ? (
+      <ScoreInput
+        draft={state.scoreDraft}
+        remaining={remainingForInput}
+        shortcuts={shortcuts}
+        onDigit={(digit) => dispatch({ type: "SCORE_DIGIT", digit })}
+        onBackspace={() => dispatch({ type: "SCORE_BACKSPACE" })}
+        onShortcut={(score) => {
+          dispatch({ type: "SET_SCORE_DRAFT", value: String(score) });
+          confirmScore(score);
+        }}
+        onConfirm={() => confirmScore(parseScoreDraft(state.scoreDraft))}
+        onUndo={() => dispatch({ type: "UNDO_LAST_TURN" })}
+        onAbort={onAbort}
+        canUndo={canUndo}
+        isEditing={!!state.editingTurn}
+        onCancelEdit={() => dispatch({ type: "CANCEL_EDIT" })}
+        canSwitchStartingPlayer={canSwitchStartingPlayer}
+        onSwitchStartingPlayer={() => dispatch({ type: "SWITCH_STARTING_PLAYER" })}
+      />
+    ) : (
+      <DartInput
+        slots={state.currentSlots}
+        remaining={remainingForInput}
+        onSetSegment={(index, segment) => dispatch({ type: "SET_SLOT_SEGMENT", index, segment })}
+        onSetMultiplier={(index, multiplier) => dispatch({ type: "SET_SLOT_MULTIPLIER", index, multiplier })}
+        onClearSlot={(index) => dispatch({ type: "CLEAR_SLOT", index })}
+        onConfirmTurn={() => dispatch({ type: confirmType })}
+        onUndo={() => dispatch({ type: "UNDO_LAST_TURN" })}
+        onAbort={onAbort}
+        canUndo={canUndo}
+        isEditing={!!state.editingTurn}
+        onCancelEdit={() => dispatch({ type: "CANCEL_EDIT" })}
+        canSwitchStartingPlayer={canSwitchStartingPlayer}
+        onSwitchStartingPlayer={() => dispatch({ type: "SWITCH_STARTING_PLAYER" })}
+      />
+    );
+
   return (
     <>
       <div className="app__floating-settings">{settingsButton}</div>
@@ -365,27 +444,11 @@ function App() {
           state={state}
           onEditTurn={(playerIndex, turnIndex) => dispatch({ type: "EDIT_TURN", playerIndex, turnIndex })}
         />
-        <DartInput
-          slots={state.currentSlots}
-          remaining={remainingForInput}
-          onSetSegment={(index, segment) => dispatch({ type: "SET_SLOT_SEGMENT", index, segment })}
-          onSetMultiplier={(index, multiplier) =>
-            dispatch({ type: "SET_SLOT_MULTIPLIER", index, multiplier })
-          }
-          onClearSlot={(index) => dispatch({ type: "CLEAR_SLOT", index })}
-          onConfirmTurn={() => dispatch({ type: state.editingTurn ? "CONFIRM_EDIT" : "CONFIRM_TURN" })}
-          onUndo={() => dispatch({ type: "UNDO_LAST_TURN" })}
-          onAbort={() => {
-            if (window.confirm("Spiel wirklich abbrechen und neu starten?")) {
-              dispatch({ type: "ABORT_MATCH" });
-            }
-          }}
-          canUndo={canUndo}
-          isEditing={!!state.editingTurn}
-          onCancelEdit={() => dispatch({ type: "CANCEL_EDIT" })}
-          canSwitchStartingPlayer={canSwitchStartingPlayer}
-          onSwitchStartingPlayer={() => dispatch({ type: "SWITCH_STARTING_PLAYER" })}
-        />
+        {input}
+
+        {checkoutPromptOpen && state.phase === "playing" && (
+          <CheckoutDartsPrompt onChoose={confirmCheckout} onCancel={() => setCheckoutPromptOpen(false)} />
+        )}
 
         {legWinnerForOverlay && (
           <ResultOverlay

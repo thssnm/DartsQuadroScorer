@@ -1,5 +1,4 @@
 import type { GameState, PlayerState } from "../game/types";
-import { turnTotal } from "../game/types";
 import { computePlayerStats } from "../game/stats";
 import { dartsInTurns } from "../game/dartCount";
 import { matchTitle } from "../game/matchEnd";
@@ -15,7 +14,7 @@ interface MatchStatsProps {
 }
 
 const scoreInTurns = (turns: PlayerState["turns"]) =>
-  turns.reduce((sum, t) => sum + (t.bust ? 0 : turnTotal(t.darts)), 0);
+  turns.reduce((sum, t) => sum + (t.bust ? 0 : t.score), 0);
 const legAverage = (turns: PlayerState["turns"]): number => {
   const darts = dartsInTurns(turns);
   return darts > 0 ? (scoreInTurns(turns) / darts) * 3 : 0;

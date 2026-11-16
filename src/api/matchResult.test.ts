@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { createInitialState } from "../game/gameReducer";
 import type { Dart, Multiplier, Turn } from "../game/types";
+import { turnTotal } from "../game/types";
 import { createMatchId, defaultBoardName, mapGameStateToResult } from "./matchResult";
 
 const dart = (segment: number, multiplier: Multiplier = 1): Dart => ({ segment, multiplier });
 const turn = (darts: Dart[], scoreBefore: number, scoreAfter: number, bust = false): Turn => ({
   darts,
+  score: turnTotal(darts),
+  dartCount: darts.length,
   scoreBefore,
   scoreAfter,
   bust,

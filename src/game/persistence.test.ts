@@ -4,10 +4,14 @@ import {
   loadBoardId,
   loadGameState,
   loadLastBestOf,
+  loadLastInputMode,
   loadLocalPlayerNames,
+  loadScoreCounts,
   loadMatchConfirmed,
   rememberPlayerNames,
   saveLastBestOf,
+  saveLastInputMode,
+  saveScoreCounts,
   loadResultUploadEnabled,
   saveBoardId,
   saveMatchConfirmed,
@@ -45,6 +49,27 @@ describe("game state persistence", () => {
     expect(state).not.toHaveProperty("legsToWin");
   });
 
+  it("adds score, dartCount, inputMode and scoreDraft to a state saved before the score mode", () => {
+    const oldTurn = { darts: [{ segment: 20, multiplier: 3 }, { segment: 20, multiplier: 1 }], scoreBefore: 501, scoreAfter: 421, bust: false };
+    stubLocalStorage({
+      "darts-quadro-scorer:game-state": JSON.stringify({
+        phase: "playing",
+        bestOf: 3,
+        players: [
+          { name: "A", turns: [oldTurn], legHistory: [{ won: true, turns: [oldTurn] }] },
+          { name: "B", turns: [], legHistory: [] },
+        ],
+      }),
+    });
+
+    const state = loadGameState();
+
+    expect(state?.inputMode).toBe("darts");
+    expect(state?.scoreDraft).toBe("");
+    expect(state?.players[0].turns[0]).toMatchObject({ score: 80, dartCount: 2 });
+    expect(state?.players[0].legHistory[0].turns[0]).toMatchObject({ score: 80, dartCount: 2 });
+  });
+
   it("keeps a stored bestOf as it is", () => {
     stubLocalStorage({
       "darts-quadro-scorer:game-state": JSON.stringify({ phase: "playing", bestOf: 2, players: [] }),
@@ -76,6 +101,37 @@ describe("last best-of", () => {
     saveLastBestOf(4);
 
     expect(loadLastBestOf(3)).toBe(4);
+  });
+});
+
+describe("input mode and score counts", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("defaults to single-dart input and stores the last choice", () => {
+    stubLocalStorage();
+    expect(loadLastInputMode()).toBe("darts");
+
+    saveLastInputMode("score");
+    expect(loadLastInputMode()).toBe("score");
+
+    stubLocalStorage({ "darts-quadro-scorer:input-mode": "unsinn" });
+    expect(loadLastInputMode()).toBe("darts");
+  });
+
+  it("stores score counts and drops damaged entries", () => {
+    stubLocalStorage();
+    expect(loadScoreCounts()).toEqual({});
+
+    saveScoreCounts({ "140": 2, "26": 1 });
+    expect(loadScoreCounts()).toEqual({ "140": 2, "26": 1 });
+
+    stubLocalStorage({ "darts-quadro-scorer:score-frequency": JSON.stringify({ "60": "x", "41": 0, "45": 3 }) });
+    expect(loadScoreCounts()).toEqual({ "45": 3 });
+
+    stubLocalStorage({ "darts-quadro-scorer:score-frequency": "[1,2]" });
+    expect(loadScoreCounts()).toEqual({});
   });
 });
 

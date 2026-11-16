@@ -1,4 +1,5 @@
-import type { GameState } from "./types";
+import type { GameState, InputMode, Turn } from "./types";
+import { turnTotal } from "./types";
 
 const STORAGE_KEY = "darts-quadro-scorer:game-state";
 const DEVICE_ID_KEY = "darts-quadro-scorer:device-id";
@@ -14,6 +15,8 @@ const LIVESCORE_ENABLED_KEY = "darts-quadro-scorer:livescore-enabled";
 const LIVESCORE_SESSION_KEY = "darts-quadro-scorer:livescore-session";
 const PLAYER_NAMES_KEY = "darts-quadro-scorer:player-names";
 const BEST_OF_KEY = "darts-quadro-scorer:best-of";
+const INPUT_MODE_KEY = "darts-quadro-scorer:input-mode";
+const SCORE_COUNTS_KEY = "darts-quadro-scorer:score-frequency";
 
 // Mehr Namen braucht ein Board nicht - die Liste soll ein Dropdown bleiben.
 const MAX_LOCAL_PLAYER_NAMES = 50;
@@ -37,12 +40,33 @@ export const saveGameState = (state: GameState): void => {
   }
 };
 
-// Ältere Spielstände kennen nur "legsToWin" (Legs zum Sieg). Daraus wird
-// die Gesamtzahl der Legs, damit ein laufendes Match einen Deploy übersteht.
-const migrateGameState = (state: GameState & { legsToWin?: number }): GameState => {
-  if (typeof state.bestOf === "number") return state;
-  const { legsToWin, ...rest } = state;
-  return { ...rest, bestOf: typeof legsToWin === "number" ? legsToWin * 2 - 1 : 3 };
+// Ältere Aufnahmen kennen nur die Darts; score und dartCount werden daraus
+// nachgerechnet (Dart-Zählregel: gezählt wird, was gespeichert ist).
+const migrateTurn = (turn: Turn): Turn =>
+  typeof turn.score === "number" && typeof turn.dartCount === "number"
+    ? turn
+    : { ...turn, score: turnTotal(turn.darts), dartCount: turn.darts.length };
+
+// Ältere Spielstände kennen nur "legsToWin" (Legs zum Sieg) und keinen
+// Eingabemodus. Beides wird ergänzt, damit ein laufendes Match einen Deploy
+// übersteht.
+const migrateGameState = (stored: GameState & { legsToWin?: number }): GameState => {
+  const { legsToWin, ...rest } = stored;
+  const state: GameState = {
+    ...rest,
+    bestOf: typeof stored.bestOf === "number" ? stored.bestOf : typeof legsToWin === "number" ? legsToWin * 2 - 1 : 3,
+    inputMode: stored.inputMode ?? "darts",
+    scoreDraft: stored.scoreDraft ?? "",
+  };
+  if (!Array.isArray(state.players)) return state;
+  return {
+    ...state,
+    players: state.players.map((player) => ({
+      ...player,
+      turns: (player.turns ?? []).map(migrateTurn),
+      legHistory: (player.legHistory ?? []).map((leg) => ({ ...leg, turns: leg.turns.map(migrateTurn) })),
+    })) as GameState["players"],
+  };
 };
 
 export const loadGameState = (): GameState | null => {
@@ -333,6 +357,51 @@ export const loadLastBestOf = (fallback: number): number => {
 export const saveLastBestOf = (bestOf: number): void => {
   try {
     window.localStorage.setItem(BEST_OF_KEY, String(bestOf));
+  } catch {
+    // siehe oben
+  }
+};
+
+// Zuletzt gewählter Eingabemodus als Vorbelegung der Setup-Checkbox.
+export const loadLastInputMode = (): InputMode => {
+  try {
+    return window.localStorage.getItem(INPUT_MODE_KEY) === "score" ? "score" : "darts";
+  } catch {
+    return "darts";
+  }
+};
+
+export const saveLastInputMode = (mode: InputMode): void => {
+  try {
+    window.localStorage.setItem(INPUT_MODE_KEY, mode);
+  } catch {
+    // siehe oben
+  }
+};
+
+// Häufigkeit der Aufnahme-Scores über alle beendeten Matches, für die
+// Shortcuts der Summeneingabe. Schlüssel: Score als Text.
+export type ScoreCounts = Record<string, number>;
+
+export const loadScoreCounts = (): ScoreCounts => {
+  try {
+    const raw = window.localStorage.getItem(SCORE_COUNTS_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return {};
+    return Object.fromEntries(
+      Object.entries(parsed as Record<string, unknown>).filter(
+        (entry): entry is [string, number] => typeof entry[1] === "number" && entry[1] > 0
+      )
+    );
+  } catch {
+    return {};
+  }
+};
+
+export const saveScoreCounts = (counts: ScoreCounts): void => {
+  try {
+    window.localStorage.setItem(SCORE_COUNTS_KEY, JSON.stringify(counts));
   } catch {
     // siehe oben
   }

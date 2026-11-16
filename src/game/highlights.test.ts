@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 import { createInitialState } from "./gameReducer";
 import { computeHighlights } from "./highlights";
 import type { CompletedLeg, Dart, GameState, Multiplier, PlayerState, Turn } from "./types";
+import { turnTotal } from "./types";
 
 const dart = (segment: number, multiplier: Multiplier = 1): Dart => ({ segment, multiplier });
 const turn = (darts: Dart[], scoreAfter = 100, bust = false): Turn => ({
   darts,
+  score: turnTotal(darts),
+  dartCount: darts.length,
   scoreBefore: scoreAfter + darts.reduce((sum, d) => sum + d.segment * d.multiplier, 0),
   scoreAfter,
   bust,

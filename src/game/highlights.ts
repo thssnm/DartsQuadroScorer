@@ -1,5 +1,4 @@
 import type { GameState, PlayerState, Turn } from "./types";
-import { turnTotal } from "./types";
 import { dartsInTurns } from "./dartCount";
 
 const FAST_LEG_DART_LIMIT = 18;
@@ -34,7 +33,7 @@ export const computeHighlights = (state: GameState): string[] => {
         const turn = leg?.turns[turnIndex];
         if (!leg || !turn) continue;
 
-        const total = turnTotal(turn.darts);
+        const total = turn.score;
         if (isCheckoutTurn(leg, turn, turnIndex)) {
           const darts = dartsInTurns(leg.turns);
           if (darts <= FAST_LEG_DART_LIMIT) {

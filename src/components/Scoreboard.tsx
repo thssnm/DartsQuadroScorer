@@ -1,6 +1,5 @@
 import { Fragment, useEffect, useRef } from "react";
 import type { GameState, PlayerState } from "../game/types";
-import { turnTotal } from "../game/types";
 import { computePlayerStats } from "../game/stats";
 import { isBoogeyNumber, isCheckoutRange, isWithinCheckoutThreshold } from "../game/checkout";
 
@@ -176,7 +175,7 @@ const TurnCell = ({
       className={`score-table__row score-table__row--editable ${nearCheckout ? "near-checkout" : ""}`}
       onClick={() => onEditTurn(playerIndex, turnIndex)}
     >
-      <strong>{turn.bust ? "BUST" : turnTotal(turn.darts)}</strong>
+      <strong>{turn.bust ? "BUST" : turn.score}</strong>
       <strong>{turn.scoreAfter}</strong>
       {nearCheckout && (
         <svg className="checkout-line" viewBox="0 0 100 100" preserveAspectRatio="none">
