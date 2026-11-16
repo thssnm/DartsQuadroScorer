@@ -17,7 +17,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg'],
+      includeAssets: ['favicon.svg', 'icon-192.png'],
       manifest: {
         name: 'Quadro Darts Scorer',
         short_name: 'Quadro Darts Scorer',
